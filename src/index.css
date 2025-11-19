@@ -52,6 +52,13 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 15%;
     --sidebar-ring: 199 89% 48%;
+
+    /* Chart colors */
+    --chart-1: 199 89% 48%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 
   .dark {
@@ -97,6 +104,57 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 15%;
     --sidebar-ring: 199 89% 48%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 199 89% 48%;
+    --chart-2: 142 76% 46%;
+    --chart-3: 38 92% 60%;
+    --chart-4: 280 65% 70%;
+    --chart-5: 340 75% 65%;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not(.dark) {
+      --background: 0 0% 100%;
+      --foreground: 222 47% 11%;
+
+      --card: 0 0% 100%;
+      --card-foreground: 222 47% 11%;
+
+      --popover: 0 0% 100%;
+      --popover-foreground: 222 47% 11%;
+
+      --primary: 199 89% 48%;
+      --primary-foreground: 210 40% 98%;
+
+      --secondary: 210 40% 96%;
+      --secondary-foreground: 222 47% 11%;
+
+      --muted: 210 40% 96%;
+      --muted-foreground: 215 16% 47%;
+
+      --accent: 210 40% 96%;
+      --accent-foreground: 222 47% 11%;
+
+      --success: 142 76% 36%;
+      --success-foreground: 0 0% 100%;
+
+      --warning: 38 92% 50%;
+      --warning-foreground: 0 0% 100%;
+
+      --destructive: 0 84% 60%;
+      --destructive-foreground: 0 0% 100%;
+
+      --border: 214 32% 91%;
+      --input: 214 32% 91%;
+      --ring: 199 89% 48%;
+
+      --chart-1: 199 89% 48%;
+      --chart-2: 142 76% 36%;
+      --chart-3: 38 92% 50%;
+      --chart-4: 280 65% 60%;
+      --chart-5: 340 75% 55%;
+    }
   }
 }
 
@@ -106,6 +164,53 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Melhor scroll em mobile */
+  @media (max-width: 768px) {
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* Garantir contraste adequado */
+  .text-success {
+    color: hsl(var(--success));
+  }
+
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+
+  .text-destructive {
+    color: hsl(var(--destructive));
+  }
+
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+
+  .bg-destructive {
+    background-color: hsl(var(--destructive));
+  }
+
+  /* Border para success/warning/destructive */
+  .border-success\/50 {
+    border-color: hsl(var(--success) / 0.5);
+  }
+
+  .border-warning\/50 {
+    border-color: hsl(var(--warning) / 0.5);
+  }
+
+  .border-destructive\/50 {
+    border-color: hsl(var(--destructive) / 0.5);
   }
 }

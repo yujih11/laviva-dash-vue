@@ -11,9 +11,12 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { EstoqueTotalModal } from "@/components/dashboard/EstoqueTotalModal";
 import { ViewingContextAlert } from "@/components/dashboard/ViewingContextAlert";
+import { ActiveFiltersAlert } from "@/components/dashboard/ActiveFiltersAlert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 import {
   Package,
   TrendingUp,
@@ -170,6 +173,19 @@ const Index = () => {
             <CardContent className="space-y-4">
               {/* Aviso Inteligente de Contexto */}
               <ViewingContextAlert mes={filters.mes} ano={filters.ano === "2025" ? 2025 : filters.ano === "2026" ? 2026 : null} />
+              
+              {/* Alerta de Filtros Ativos */}
+              <ActiveFiltersAlert totalResults={filteredDashboard.length} />
+              
+              {/* Mensagem quando não há resultados */}
+              {filteredDashboard.length === 0 && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Nenhum resultado encontrado com os filtros atuais. Tente ajustar os filtros para ver mais dados.
+                  </AlertDescription>
+                </Alert>
+              )}
               {loading ? (
                 <div className="space-y-3">
                   {[...Array(10)].map((_, i) => (
