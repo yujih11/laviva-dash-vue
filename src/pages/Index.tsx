@@ -1,22 +1,24 @@
 import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
+import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AlertsList } from "@/components/dashboard/AlertsList";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { FilterBar } from "@/components/dashboard/FilterBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Package,
   TrendingUp,
   Calendar,
   AlertTriangle,
-  RefreshCw,
   BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
   const { dashboardData, estoqueAtual, loading, error, refetch } = useSupabaseDashboardData();
+  const { filteredDashboard, filteredEstoque } = useFilteredDashboardData(dashboardData, estoqueAtual);
 
   if (error) {
     toast.error("Erro ao carregar dados", {
@@ -24,14 +26,14 @@ const Index = () => {
     });
   }
 
-  // Agregar dados para estatísticas
-  const totalProdutos = dashboardData.length;
-  const totalEstoque = estoqueAtual.reduce((acc, item) => acc + (item.quantidade_total || 0), 0);
-  const estoqueDisponivel = estoqueAtual.reduce((acc, item) => acc + (item.quantidade_disponivel || 0), 0);
-  const totalAlertas = dashboardData.reduce((acc, item) => acc + (item.alertas?.length || 0), 0);
+  // Agregar dados para estatísticas (usando dados filtrados)
+  const totalProdutos = filteredDashboard.length;
+  const totalEstoque = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_total || 0), 0);
+  const estoqueDisponivel = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_disponivel || 0), 0);
+  const totalAlertas = filteredDashboard.reduce((acc, item) => acc + (item.alertas?.length || 0), 0);
 
-  // Calcular previsão total 2025
-  const previsao2025Total = dashboardData.reduce((acc, item) => {
+  // Calcular previsão total 2025 (dados filtrados)
+  const previsao2025Total = filteredDashboard.reduce((acc, item) => {
     const previsoes = item.previsao_2025_parsed || [];
     const previsao = Array.isArray(previsoes) 
       ? previsoes.reduce((sum, p) => sum + (p.quantidade || 0), 0)
@@ -42,26 +44,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground tracking-tight">LAVIVA</h1>
-              <p className="text-sm text-muted-foreground mt-1">Dashboard de Previsão de Produção</p>
-            </div>
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader onRefresh={() => refetch()} loading={loading} />
+
+      {/* Barra de Filtros */}
+      <FilterBar data={dashboardData} />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Stats Grid */}
@@ -134,7 +120,7 @@ const Index = () => {
                 </div>
               ) : (
                 <AlertsList
-                  alerts={dashboardData.flatMap((item) => item.alertas || [])}
+                  alerts={filteredDashboard.flatMap((item) => item.alertas || [])}
                 />
               )}
             </CardContent>
@@ -159,7 +145,7 @@ const Index = () => {
                   ))}
                 </div>
               ) : (
-                <EstoqueTable estoque={estoqueAtual} />
+                <EstoqueTable estoque={filteredEstoque} />
               )}
             </CardContent>
           </Card>
@@ -182,13 +168,13 @@ const Index = () => {
                     <Skeleton key={i} className="h-32 w-full" />
                   ))}
                 </div>
-              ) : dashboardData.length === 0 ? (
+              ) : filteredDashboard.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  Nenhuma previsão disponível
+                  Nenhuma previsão disponível com os filtros selecionados
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {dashboardData.slice(0, 5).map((item) => (
+                  {filteredDashboard.slice(0, 5).map((item) => (
                     <div
                       key={item.id}
                       className="border border-border rounded-lg p-4 hover:bg-muted/30 transition-colors"
