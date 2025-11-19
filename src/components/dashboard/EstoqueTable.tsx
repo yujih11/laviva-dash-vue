@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EstoqueAtual } from "@/hooks/useSupabaseDashboardData";
+import { cleanProductName } from "@/lib/product-utils";
 
 interface EstoqueTableProps {
   estoque: EstoqueAtual[];
@@ -52,7 +53,7 @@ export function EstoqueTable({ estoque }: EstoqueTableProps) {
             estoque.slice(0, 10).map((item) => (
               <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
                 <TableCell className="font-mono text-sm">{item.codigo_produto}</TableCell>
-                <TableCell className="font-medium">{item.produto}</TableCell>
+                <TableCell className="font-medium">{cleanProductName(item.produto)}</TableCell>
                 <TableCell>{item.marca || "-"}</TableCell>
                 <TableCell>{item.lote || "-"}</TableCell>
                 <TableCell className="text-right font-semibold">

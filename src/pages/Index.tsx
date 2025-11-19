@@ -1,6 +1,7 @@
 import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
 import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
+import { cleanProductName } from "@/lib/product-utils";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AlertsList } from "@/components/dashboard/AlertsList";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
@@ -28,8 +29,10 @@ const Index = () => {
   }
 
   // Agregar dados para estatísticas (usando dados filtrados)
-  // 1. Produtos Monitorados - contar produtos únicos
-  const totalProdutos = new Set(filteredDashboard.map((item) => item.produto).filter(Boolean)).size;
+  // 1. Produtos Monitorados - contar produtos únicos (com nomes limpos)
+  const totalProdutos = new Set(
+    filteredDashboard.map((item) => cleanProductName(item.produto)).filter(Boolean)
+  ).size;
 
   // 2. Estoque Total - somar quantidade_total e calcular percentual disponível
   const totalEstoque = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_total || 0), 0);
@@ -205,7 +208,7 @@ const Index = () => {
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-foreground">{item.produto}</h3>
+                          <h3 className="font-semibold text-foreground">{cleanProductName(item.produto)}</h3>
                           <p className="text-sm text-muted-foreground">
                             {item.cliente} • {item.codigo_produto}
                           </p>
