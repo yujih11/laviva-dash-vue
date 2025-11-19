@@ -10,9 +10,14 @@ export function useFilteredDashboardData(
 
   const filteredDashboard = useMemo(() => {
     return dashboardData.filter((item) => {
-      // Filtro de produtos
-      if (filters.produtos.length > 0 && !filters.produtos.includes(item.produto || "")) {
-        return false;
+      const cleanedProduto = item.produto?.trim() || "";
+      
+      // Filtro de produtos (comparar com nome limpo)
+      if (filters.produtos.length > 0) {
+        const matchesProduto = filters.produtos.some(
+          (filterProduto) => cleanedProduto.includes(filterProduto) || filterProduto.includes(cleanedProduto)
+        );
+        if (!matchesProduto) return false;
       }
 
       // Filtro de clientes
@@ -44,9 +49,14 @@ export function useFilteredDashboardData(
 
   const filteredEstoque = useMemo(() => {
     return estoqueAtual.filter((item) => {
-      // Filtro de produtos
-      if (filters.produtos.length > 0 && !filters.produtos.includes(item.produto || "")) {
-        return false;
+      const cleanedProduto = item.produto?.trim() || "";
+      
+      // Filtro de produtos (comparar com nome limpo)
+      if (filters.produtos.length > 0) {
+        const matchesProduto = filters.produtos.some(
+          (filterProduto) => cleanedProduto.includes(filterProduto) || filterProduto.includes(cleanedProduto)
+        );
+        if (!matchesProduto) return false;
       }
 
       return true;

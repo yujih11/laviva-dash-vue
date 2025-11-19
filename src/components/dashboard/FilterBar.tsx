@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { DashboardData } from "@/hooks/useSupabaseDashboardData";
+import { cleanProductName } from "@/lib/product-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -50,7 +51,9 @@ export function FilterBar({ data }: FilterBarProps) {
 
   // Extrair listas únicas de produtos e clientes
   const produtos = useMemo(() => {
-    const uniqueProdutos = [...new Set(data.map((item) => item.produto).filter(Boolean))];
+    const uniqueProdutos = [...new Set(
+      data.map((item) => cleanProductName(item.produto)).filter(Boolean)
+    )];
     return uniqueProdutos.sort();
   }, [data]);
 
