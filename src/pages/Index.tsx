@@ -3,7 +3,7 @@ import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { cleanProductName } from "@/lib/product-utils";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { AlertsList } from "@/components/dashboard/AlertsList";
+import { AlertasAgrupados } from "@/components/dashboard/AlertasAgrupados";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
 import { TabelaPrevisaoProdutos } from "@/components/dashboard/TabelaPrevisaoProdutos";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -130,30 +130,24 @@ const Index = () => {
           )}
         </section>
 
-        {/* Alertas Section */}
+        {/* Alertas e Notificações Agrupados */}
         <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Alertas e Notificações
-              </CardTitle>
-              <CardDescription>Itens que requerem atenção imediata</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
+          {loading ? (
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
+                    <Skeleton key={i} className="h-24 w-full" />
                   ))}
                 </div>
-              ) : (
-                <AlertsList
-                  alerts={filteredDashboard.flatMap((item) => item.alertas || [])}
-                />
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <AlertasAgrupados data={filteredDashboard} />
+          )}
         </section>
 
         {/* Tabela Principal de Previsões */}
