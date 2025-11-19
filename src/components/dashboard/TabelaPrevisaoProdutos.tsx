@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -22,9 +23,13 @@ import {
   isMonthInFuture,
   isWithinTwoMonths,
   getPreviousMonth,
+  getMonthName,
 } from "@/lib/date-utils";
-import { ArrowUpDown, TrendingUp, AlertTriangle, Info } from "lucide-react";
+import { formatNumber, formatPercentage, getVariationColor } from "@/lib/format-utils";
+import { exportToExcel, formatPrevisaoDataForExport } from "@/lib/excel-export";
+import { ArrowUpDown, TrendingUp, TrendingDown, AlertTriangle, Info, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface TabelaPrevisaoProdutosProps {
   data: DashboardData[];
@@ -156,18 +161,46 @@ export function TabelaPrevisaoProdutos({
     }
   };
 
-  const formatNumber = (num: number | null): string => {
-    if (num === null || num === 0) return "—";
-    return num.toLocaleString("pt-BR");
-  };
+  const handleExportExcel = () => {
+    try {
+      const exportData = formatPrevisaoDataForExport(
+        sortedData,
+        mesSelecionado,
+        anoSelecionado ? parseInt(anoSelecionado) : null
+      );
 
-  const getVariacaoColor = (variacao: number) => {
-    if (variacao > 10) return "text-success";
-    if (variacao < -10) return "text-destructive";
-    return "text-muted-foreground";
+      const monthName = mesSelecionado ? getMonthName(mesSelecionado).toLowerCase() : "todos";
+      const year = anoSelecionado || new Date().getFullYear();
+      const filename = `previsao_laviva_${year}_${monthName}`;
+
+      exportToExcel(exportData, filename, "Previsão de Produção");
+      
+      toast.success("Exportação concluída", {
+        description: "Os dados foram exportados para Excel com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      toast.error("Erro na exportação", {
+        description: "Não foi possível exportar os dados. Tente novamente.",
+      });
+    }
   };
 
   return (
+    <div className="space-y-4">
+      {/* Botão de Exportar */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleExportExcel}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          disabled={sortedData.length === 0}
+        >
+          <Download className="h-4 w-4" />
+          Exportar para Excel
+        </Button>
+      </div>
     <div className="rounded-lg border border-border overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
@@ -277,17 +310,25 @@ export function TabelaPrevisaoProdutos({
                           <TooltipTrigger asChild>
                             <div
                               className={cn(
-                                "flex items-center gap-1 justify-end cursor-help",
-                                getVariacaoColor(row.variacao)
+                                "flex items-center gap-1 justify-end cursor-help font-semibold",
+                                getVariationColor(row.variacao).text
                               )}
                             >
-                              <TrendingUp className="h-3 w-3" />
-                              {row.variacao > 0 ? "+" : ""}
-                              {row.variacao.toFixed(1)}%
+                              {row.variacao > 0 ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3" />
+                              )}
+                              {formatPercentage(row.variacao)}
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent className="bg-popover">
-                            <p>Variação trimestral: {row.variacao.toFixed(2)}%</p>
+                          <TooltipContent className="bg-popover max-w-xs">
+                            <p className="text-sm">
+                              Variação entre a previsão e o realizado deste trimestre.
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Baseado no histórico disponível
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -331,6 +372,7 @@ export function TabelaPrevisaoProdutos({
           </TableBody>
         </Table>
       </div>
+    </div>
     </div>
   );
 }
