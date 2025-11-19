@@ -5,6 +5,7 @@ import { cleanProductName } from "@/lib/product-utils";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AlertsList } from "@/components/dashboard/AlertsList";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
+import { TabelaPrevisaoProdutos } from "@/components/dashboard/TabelaPrevisaoProdutos";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {
   Calendar,
   AlertTriangle,
   BarChart3,
+  Table as TableIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -148,6 +150,37 @@ const Index = () => {
               ) : (
                 <AlertsList
                   alerts={filteredDashboard.flatMap((item) => item.alertas || [])}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Tabela Principal de Previsões */}
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TableIcon className="h-5 w-5" />
+                Previsão de Produção por Produto
+              </CardTitle>
+              <CardDescription>
+                Detalhamento completo de previsões, realizações e alertas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(10)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <TabelaPrevisaoProdutos
+                  data={filteredDashboard}
+                  estoqueAtual={estoqueAtual}
+                  mesSelecionado={filters.mes}
+                  anoSelecionado={filters.ano}
                 />
               )}
             </CardContent>
