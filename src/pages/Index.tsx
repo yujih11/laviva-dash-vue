@@ -32,7 +32,10 @@ const Index = () => {
 
   // Calcular previsão total 2025
   const previsao2025Total = dashboardData.reduce((acc, item) => {
-    const previsao = item.previsao_2025_parsed?.reduce((sum, p) => sum + (p.quantidade || 0), 0) || 0;
+    const previsoes = item.previsao_2025_parsed || [];
+    const previsao = Array.isArray(previsoes) 
+      ? previsoes.reduce((sum, p) => sum + (p.quantidade || 0), 0)
+      : 0;
     return acc + previsao;
   }, 0);
 
@@ -211,17 +214,19 @@ const Index = () => {
                         <div className="bg-muted/50 rounded p-3">
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2025</p>
                           <p className="text-2xl font-bold text-foreground">
-                            {item.previsao_2025_parsed
-                              ?.reduce((sum, p) => sum + (p.quantidade || 0), 0)
-                              .toLocaleString("pt-BR") || "0"}
+                            {(Array.isArray(item.previsao_2025_parsed)
+                              ? item.previsao_2025_parsed.reduce((sum, p) => sum + (p.quantidade || 0), 0)
+                              : 0
+                            ).toLocaleString("pt-BR")}
                           </p>
                         </div>
                         <div className="bg-muted/50 rounded p-3">
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2026</p>
                           <p className="text-2xl font-bold text-foreground">
-                            {item.previsao_2026_parsed
-                              ?.reduce((sum, p) => sum + (p.quantidade || 0), 0)
-                              .toLocaleString("pt-BR") || "0"}
+                            {(Array.isArray(item.previsao_2026_parsed)
+                              ? item.previsao_2026_parsed.reduce((sum, p) => sum + (p.quantidade || 0), 0)
+                              : 0
+                            ).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       </div>
