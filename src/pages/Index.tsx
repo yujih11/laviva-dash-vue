@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
 import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
@@ -8,7 +9,9 @@ import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
 import { TabelaPrevisaoProdutos } from "@/components/dashboard/TabelaPrevisaoProdutos";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { FilterBar } from "@/components/dashboard/FilterBar";
+import { EstoqueTotalModal } from "@/components/dashboard/EstoqueTotalModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Package,
@@ -21,8 +24,9 @@ import {
 import { toast } from "sonner";
 
 const Index = () => {
-  const { dashboardData, estoqueAtual, loading, error, refetch } = useSupabaseDashboardData();
+  const { dashboardData, estoqueAtual, loading, error, refetch, loadEstoqueResumido } = useSupabaseDashboardData();
   const { filteredDashboard, filteredEstoque } = useFilteredDashboardData(dashboardData, estoqueAtual);
+  const [isEstoqueTotalModalOpen, setIsEstoqueTotalModalOpen] = useState(false);
 
   if (error) {
     toast.error("Erro ao carregar dados", {
@@ -185,11 +189,23 @@ const Index = () => {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Estoque Atual
-              </CardTitle>
-              <CardDescription>Visualização dos itens em estoque</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Estoque Atual
+                  </CardTitle>
+                  <CardDescription>Visualização dos itens em estoque</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEstoqueTotalModalOpen(true)}
+                  className="gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Ver Estoque Total
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -278,6 +294,17 @@ const Index = () => {
           </Card>
         </section>
       </main>
+
+      {/* Modal Estoque Total */}
+      <EstoqueTotalModal
+        open={isEstoqueTotalModalOpen}
+        onOpenChange={setIsEstoqueTotalModalOpen}
+        loadEstoqueResumido={loadEstoqueResumido}
+        filtros={{
+          produtos: filters.produtos,
+          clientes: filters.clientes,
+        }}
+      />
     </div>
   );
 };
