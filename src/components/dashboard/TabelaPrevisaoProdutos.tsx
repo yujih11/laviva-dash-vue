@@ -250,7 +250,7 @@ export function TabelaPrevisaoProdutos({
                   key={row.id}
                   className={cn(
                     "hover:bg-muted/30 transition-colors",
-                    row.isOperational && "bg-primary/5"
+                    row.isOperational && "bg-primary/5 border-l-2 border-l-primary"
                   )}
                 >
                   <TableCell className="font-medium max-w-[250px] truncate">
@@ -261,7 +261,7 @@ export function TabelaPrevisaoProdutos({
                   <TableCell
                     className={cn(
                       "text-right font-semibold",
-                      row.isOperational && "text-primary"
+                      row.isOperational && "text-primary font-bold"
                     )}
                   >
                     {formatNumber(row.previsao)}
