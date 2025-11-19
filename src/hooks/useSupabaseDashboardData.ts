@@ -31,15 +31,44 @@ export interface EstoqueResumido {
   estoque_disponivel: number | null;
 }
 
-// Função helper para parse seguro de JSON
+// Função helper para parse seguro de JSON com validação de array
 function safeJsonParse<T>(data: any): T | null {
   if (!data) return null;
-  if (typeof data === "object") return data as T;
-  try {
-    return JSON.parse(data) as T;
-  } catch {
-    return null;
+  
+  // Se já é um objeto, retorna diretamente
+  if (typeof data === "object" && !Array.isArray(data) && data !== null) {
+    return data as T;
   }
+  
+  // Se é string, tenta fazer parse
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data) as T;
+    } catch {
+      return null;
+    }
+  }
+  
+  // Se já é array, retorna diretamente
+  if (Array.isArray(data)) {
+    return data as T;
+  }
+  
+  return null;
+}
+
+// Helper para garantir que o resultado é um array
+function ensureArray<T>(data: any): T[] {
+  if (Array.isArray(data)) return data;
+  if (!data) return [];
+  // Se for um objeto com propriedades numéricas, converte para array
+  if (typeof data === "object") {
+    const values = Object.values(data);
+    if (values.length > 0 && values.every(v => typeof v === "object")) {
+      return values as T[];
+    }
+  }
+  return [];
 }
 
 export function useSupabaseDashboardData() {
@@ -59,12 +88,12 @@ export function useSupabaseDashboardData() {
 
       if (error) throw error;
 
-      // Parse dos campos JSON
+      // Parse dos campos JSON com garantia de array
       return (data || []).map((item) => ({
         ...item,
-        previsao_2025_parsed: safeJsonParse<PrevisaoMensal[]>(item.previsao_2025),
-        previsao_2026_parsed: safeJsonParse<PrevisaoMensal[]>(item.previsao_2026),
-        comparativos_parsed: safeJsonParse<Comparativo[]>(item.comparativos),
+        previsao_2025_parsed: ensureArray<PrevisaoMensal>(item.previsao_2025),
+        previsao_2026_parsed: ensureArray<PrevisaoMensal>(item.previsao_2026),
+        comparativos_parsed: ensureArray<Comparativo>(item.comparativos),
       })) as DashboardData[];
     },
     staleTime: 1000 * 60 * 5, // Cache por 5 minutos
