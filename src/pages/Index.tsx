@@ -1,5 +1,6 @@
 import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
 import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
+import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AlertsList } from "@/components/dashboard/AlertsList";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
@@ -27,18 +28,41 @@ const Index = () => {
   }
 
   // Agregar dados para estatísticas (usando dados filtrados)
-  const totalProdutos = filteredDashboard.length;
-  const totalEstoque = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_total || 0), 0);
-  const estoqueDisponivel = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_disponivel || 0), 0);
-  const totalAlertas = filteredDashboard.reduce((acc, item) => acc + (item.alertas?.length || 0), 0);
+  // 1. Produtos Monitorados - contar produtos únicos
+  const totalProdutos = new Set(filteredDashboard.map((item) => item.produto).filter(Boolean)).size;
 
-  // Calcular previsão total 2025 (dados filtrados)
+  // 2. Estoque Total - somar quantidade_total e calcular percentual disponível
+  const totalEstoque = filteredEstoque.reduce((acc, item) => acc + (item.quantidade_total || 0), 0);
+  const estoqueDisponivel = filteredEstoque.reduce(
+    (acc, item) => acc + (item.quantidade_disponivel || 0),
+    0
+  );
+  const percentualEstoqueDisponivel = totalEstoque > 0 ? (estoqueDisponivel / totalEstoque) * 100 : 0;
+
+  // 3. Previsão 2025 - calcular baseado no mês selecionado (se houver) ou soma total
+  const { filters } = useDashboardFilters();
   const previsao2025Total = filteredDashboard.reduce((acc, item) => {
     const previsoes = item.previsao_2025_parsed || [];
-    const previsao = Array.isArray(previsoes) 
-      ? previsoes.reduce((sum, p) => sum + (p.quantidade || 0), 0)
-      : 0;
-    return acc + previsao;
+    
+    if (!Array.isArray(previsoes)) return acc;
+
+    // Se há mês selecionado, somar apenas esse mês
+    if (filters.mes !== null) {
+      const mesData = previsoes.find((p) => p.mes === filters.mes);
+      return acc + (mesData?.quantidade || 0);
+    }
+
+    // Caso contrário, somar todos os meses
+    return acc + previsoes.reduce((sum, p) => sum + (p.quantidade || 0), 0);
+  }, 0);
+
+  // 4. Alertas - contar total de alertas
+  const totalAlertas = filteredDashboard.reduce((acc, item) => {
+    const alertas = item.alertas;
+    if (Array.isArray(alertas)) {
+      return acc + alertas.length;
+    }
+    return acc;
   }, 0);
 
   return (
@@ -70,23 +94,23 @@ const Index = () => {
               <StatsCard
                 title="Produtos Monitorados"
                 value={totalProdutos}
-                description="Total de produtos"
+                description="Total de produtos únicos"
                 icon={Package}
                 variant="default"
               />
               <StatsCard
                 title="Estoque Total"
                 value={totalEstoque.toLocaleString("pt-BR")}
-                description={`${estoqueDisponivel.toLocaleString("pt-BR")} disponível`}
+                description={`${estoqueDisponivel.toLocaleString("pt-BR")} disponível (${percentualEstoqueDisponivel.toFixed(0)}%)`}
                 icon={BarChart3}
-                trend={estoqueDisponivel > totalEstoque * 0.5 ? "up" : "down"}
-                trendValue={`${((estoqueDisponivel / totalEstoque) * 100).toFixed(0)}%`}
-                variant={estoqueDisponivel > totalEstoque * 0.5 ? "success" : "warning"}
+                trend={percentualEstoqueDisponivel > 50 ? "up" : percentualEstoqueDisponivel > 20 ? "neutral" : "down"}
+                trendValue={`${percentualEstoqueDisponivel.toFixed(1)}%`}
+                variant={percentualEstoqueDisponivel > 50 ? "success" : percentualEstoqueDisponivel > 20 ? "warning" : "destructive"}
               />
               <StatsCard
-                title="Previsão 2025"
+                title={filters.mes ? `Previsão ${filters.ano || "2025"} - Mês ${filters.mes}` : "Previsão 2025 Total"}
                 value={previsao2025Total.toLocaleString("pt-BR")}
-                description="Unidades previstas"
+                description={filters.mes ? "Unidades previstas no mês" : "Unidades previstas no ano"}
                 icon={TrendingUp}
                 variant="default"
               />
