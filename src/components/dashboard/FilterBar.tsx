@@ -24,8 +24,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, X, Filter } from "lucide-react";
+import { Check, X, Filter, Calendar, Package, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 interface FilterBarProps {
   data: DashboardData[];
@@ -104,79 +105,101 @@ export function FilterBar({ data }: FilterBarProps) {
           </div>
 
           {/* Grid de Filtros */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Filtro de Produtos */}
-            <MultiSelectFilter
-              label="Produtos"
-              options={produtos}
-              selected={filters.produtos}
-              onSelect={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  produtos: prev.produtos.includes(value)
-                    ? prev.produtos.filter((p) => p !== value)
-                    : [...prev.produtos, value],
-                }))
-              }
-              placeholder="Selecione produtos"
-            />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-foreground font-medium">
+                <Package className="h-3.5 w-3.5 opacity-70" />
+                Produtos
+              </Label>
+              <MultiSelectFilter
+                options={produtos}
+                selected={filters.produtos}
+                onSelect={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    produtos: prev.produtos.includes(value)
+                      ? prev.produtos.filter((p) => p !== value)
+                      : [...prev.produtos, value],
+                  }))
+                }
+                placeholder="Selecione produtos"
+              />
+            </div>
 
             {/* Filtro de Clientes */}
-            <MultiSelectFilter
-              label="Clientes"
-              options={clientes}
-              selected={filters.clientes}
-              onSelect={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  clientes: prev.clientes.includes(value)
-                    ? prev.clientes.filter((c) => c !== value)
-                    : [...prev.clientes, value],
-                }))
-              }
-              placeholder="Selecione clientes"
-            />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-foreground font-medium">
+                <Users className="h-3.5 w-3.5 opacity-70" />
+                Clientes
+              </Label>
+              <MultiSelectFilter
+                options={clientes}
+                selected={filters.clientes}
+                onSelect={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    clientes: prev.clientes.includes(value)
+                      ? prev.clientes.filter((c) => c !== value)
+                      : [...prev.clientes, value],
+                  }))
+                }
+                placeholder="Selecione clientes"
+              />
+            </div>
 
             {/* Filtro de Ano */}
-            <Select
-              value={filters.ano || ""}
-              onValueChange={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  ano: value ? (value as "2025" | "2026") : null,
-                }))
-              }
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Ano" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2026">2026</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-foreground font-medium">
+                <Calendar className="h-3.5 w-3.5 opacity-70" />
+                Ano
+              </Label>
+              <Select
+                value={filters.ano || ""}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    ano: value ? (value as "2025" | "2026") : null,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-background text-foreground placeholder:text-muted-foreground/80">
+                  <SelectValue placeholder="Selecione o ano" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Filtro de Mês */}
-            <Select
-              value={filters.mes?.toString() || ""}
-              onValueChange={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  mes: value ? parseInt(value) : null,
-                }))
-              }
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Mês" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover max-h-[300px]">
-                {meses.map((mes) => (
-                  <SelectItem key={mes.value} value={mes.value.toString()}>
-                    {mes.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-foreground font-medium">
+                <Calendar className="h-3.5 w-3.5 opacity-70" />
+                Mês
+              </Label>
+              <Select
+                value={filters.mes?.toString() || ""}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    mes: value ? parseInt(value) : null,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-background text-foreground placeholder:text-muted-foreground/80">
+                  <SelectValue placeholder="Selecione o mês" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  {meses.map((mes) => (
+                    <SelectItem key={mes.value} value={mes.value.toString()}>
+                      {mes.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -186,7 +209,6 @@ export function FilterBar({ data }: FilterBarProps) {
 
 // Componente auxiliar para multi-select
 interface MultiSelectFilterProps {
-  label: string;
   options: string[];
   selected: string[];
   onSelect: (value: string) => void;
@@ -194,7 +216,6 @@ interface MultiSelectFilterProps {
 }
 
 function MultiSelectFilter({
-  label,
   options,
   selected,
   onSelect,
@@ -205,18 +226,18 @@ function MultiSelectFilter({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="justify-start bg-background hover:bg-muted/50"
+          className="w-full justify-start bg-background hover:bg-muted/50 text-foreground placeholder:text-muted-foreground/80"
         >
-          <span className="truncate">
+          <span className="truncate text-muted-foreground/80">
             {selected.length > 0
-              ? `${selected.length} ${label.toLowerCase()} selecionado${selected.length > 1 ? "s" : ""}`
+              ? `${selected.length} item${selected.length > 1 ? "s" : ""} selecionado${selected.length > 1 ? "s" : ""}`
               : placeholder}
           </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0 bg-popover" align="start">
         <Command className="bg-popover">
-          <CommandInput placeholder={`Buscar ${label.toLowerCase()}...`} />
+          <CommandInput placeholder="Buscar..." className="text-foreground placeholder:text-muted-foreground/80" />
           <CommandList>
             <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
             <CommandGroup>

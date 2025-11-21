@@ -213,4 +213,17 @@ All colors MUST be HSL.
   .border-destructive\/50 {
     border-color: hsl(var(--destructive) / 0.5);
   }
+
+  /* Placeholders visíveis no modo escuro */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.8;
+  }
+
+  /* Select placeholders */
+  [data-placeholder] {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.8;
+  }
 }
