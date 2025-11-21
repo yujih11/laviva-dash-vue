@@ -30,16 +30,29 @@ export function useFilteredDashboardData(
         const previsaoKey = filters.ano === "2025" ? "previsao_2025_parsed" : "previsao_2026_parsed";
         const previsao = item[previsaoKey];
         
-        if (!previsao || !Array.isArray(previsao) || previsao.length === 0) {
-          return false;
-        }
-
-        // Filtro de mês dentro do ano
-        if (filters.mes) {
-          const mesData = previsao.find((p) => p.mes === filters.mes);
-          if (!mesData) {
-            return false;
+        // Verifica se há dados de previsão
+        if (!previsao) return false;
+        
+        // Suporta tanto array quanto objeto
+        if (Array.isArray(previsao)) {
+          if (previsao.length === 0) return false;
+          
+          // Filtro de mês dentro do ano
+          if (filters.mes) {
+            const mesData = previsao.find((p) => p.mes === filters.mes);
+            if (!mesData) return false;
           }
+        } else if (typeof previsao === "object") {
+          const valores = Object.keys(previsao);
+          if (valores.length === 0) return false;
+          
+          // Filtro de mês dentro do ano (formato objeto)
+          if (filters.mes) {
+            const nomeMes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][filters.mes - 1];
+            if (!(nomeMes in previsao)) return false;
+          }
+        } else {
+          return false;
         }
       }
 

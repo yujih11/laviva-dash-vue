@@ -55,18 +55,31 @@ const Index = () => {
   // 3. Previsão 2025 - calcular baseado no mês selecionado (se houver) ou soma total
   const { filters } = useDashboardFilters();
   const previsao2025Total = filteredDashboard.reduce((acc, item) => {
-    const previsoes = item.previsao_2025_parsed || [];
+    const previsoes = item.previsao_2025_parsed;
     
-    if (!Array.isArray(previsoes)) return acc;
+    if (!previsoes) return acc;
 
     // Se há mês selecionado, somar apenas esse mês
     if (filters.mes !== null) {
-      const mesData = previsoes.find((p) => p.mes === filters.mes);
-      return acc + (mesData?.quantidade || 0);
+      // Suporta tanto array quanto objeto
+      if (Array.isArray(previsoes)) {
+        const mesData = previsoes.find((p) => p.mes === filters.mes);
+        return acc + Number(mesData?.quantidade ?? 0);
+      } else if (typeof previsoes === "object") {
+        const nomeMes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][filters.mes - 1];
+        return acc + Number((previsoes as Record<string, any>)[nomeMes] ?? 0);
+      }
     }
 
     // Caso contrário, somar todos os meses
-    return acc + previsoes.reduce((sum, p) => sum + (p.quantidade || 0), 0);
+    if (Array.isArray(previsoes)) {
+      return acc + previsoes.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
+    } else if (typeof previsoes === "object") {
+      const valores = Object.values(previsoes as Record<string, any>);
+      return acc + valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
+    }
+    
+    return acc;
   }, 0);
 
   // 4. Alertas - contar total de alertas
@@ -289,19 +302,41 @@ const Index = () => {
                         <div className="bg-muted/50 rounded p-3">
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2025</p>
                           <p className="text-2xl font-bold text-foreground">
-                            {(Array.isArray(item.previsao_2025_parsed)
-                              ? item.previsao_2025_parsed.reduce((sum, p) => sum + (p.quantidade || 0), 0)
-                              : 0
-                            ).toLocaleString("pt-BR")}
+                            {(() => {
+                              const prev = item.previsao_2025_parsed;
+                              if (!prev) return "0";
+                              
+                              if (Array.isArray(prev)) {
+                                const total = prev.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
+                                return total.toLocaleString("pt-BR");
+                              } else if (typeof prev === "object") {
+                                const valores = Object.values(prev as Record<string, any>);
+                                const total = valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
+                                return total.toLocaleString("pt-BR");
+                              }
+                              
+                              return "0";
+                            })()}
                           </p>
                         </div>
                         <div className="bg-muted/50 rounded p-3">
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2026</p>
                           <p className="text-2xl font-bold text-foreground">
-                            {(Array.isArray(item.previsao_2026_parsed)
-                              ? item.previsao_2026_parsed.reduce((sum, p) => sum + (p.quantidade || 0), 0)
-                              : 0
-                            ).toLocaleString("pt-BR")}
+                            {(() => {
+                              const prev = item.previsao_2026_parsed;
+                              if (!prev) return "0";
+                              
+                              if (Array.isArray(prev)) {
+                                const total = prev.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
+                                return total.toLocaleString("pt-BR");
+                              } else if (typeof prev === "object") {
+                                const valores = Object.values(prev as Record<string, any>);
+                                const total = valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
+                                return total.toLocaleString("pt-BR");
+                              }
+                              
+                              return "0";
+                            })()}
                           </p>
                         </div>
                       </div>

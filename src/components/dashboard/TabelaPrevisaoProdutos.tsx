@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DashboardData, EstoqueAtual } from "@/hooks/useSupabaseDashboardData";
+import { DashboardData, EstoqueAtual, extrairPrevisao } from "@/hooks/useSupabaseDashboardData";
 import { cleanProductName } from "@/lib/product-utils";
 import {
   getQuarter,
@@ -64,13 +64,10 @@ export function TabelaPrevisaoProdutos({
       const codigoProduto = item.codigo_produto || "";
       const cliente = item.cliente || "";
 
-      // 3. Previsão do mês selecionado
+      // 3. Previsão do mês selecionado - suporta tanto array quanto objeto
       const previsaoKey = anoSelecionado === "2026" ? "previsao_2026_parsed" : "previsao_2025_parsed";
-      const previsoes = item[previsaoKey] || [];
-      const previsaoMes = Array.isArray(previsoes)
-        ? previsoes.find((p) => p.mes === defaultMes)
-        : null;
-      const previsaoValor = previsaoMes?.quantidade || 0;
+      const previsaoData = item[previsaoKey];
+      const previsaoValor = extrairPrevisao(previsaoData, defaultMes);
 
       // 4. Realizado (mês anterior) - apenas se mês for passado
       let realizadoValor = 0;
