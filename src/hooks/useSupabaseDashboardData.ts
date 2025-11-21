@@ -2,6 +2,32 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
+// Helper para converter número do mês em nome de 3 letras minúsculo
+export const mesParaNome = (mes: number): string => {
+  const nomes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  return nomes[mes - 1] || "";
+};
+
+// Helper para extrair valor de previsão de forma segura
+export const extrairPrevisao = (previsaoData: any, mes: number): number => {
+  if (!previsaoData) return 0;
+  
+  // Se for array (formato novo)
+  if (Array.isArray(previsaoData)) {
+    const mesData = previsaoData.find((p) => p.mes === mes);
+    return Number(mesData?.quantidade ?? 0);
+  }
+  
+  // Se for objeto (formato antigo com chaves "jan", "fev", etc)
+  if (typeof previsaoData === "object") {
+    const nomeMes = mesParaNome(mes);
+    const valor = previsaoData[nomeMes];
+    return Number(valor ?? 0);
+  }
+  
+  return 0;
+};
+
 // Tipos para os dados parseados de JSON
 export interface PrevisaoMensal {
   mes: number;
@@ -16,8 +42,8 @@ export interface Comparativo {
 }
 
 export interface DashboardData extends Omit<Tables<"previsao_dashboard">, "previsao_2025" | "previsao_2026" | "comparativos"> {
-  previsao_2025_parsed: PrevisaoMensal[] | null;
-  previsao_2026_parsed: PrevisaoMensal[] | null;
+  previsao_2025_parsed: PrevisaoMensal[] | Record<string, number> | null;
+  previsao_2026_parsed: PrevisaoMensal[] | Record<string, number> | null;
   comparativos_parsed: Comparativo[] | null;
 }
 
@@ -71,6 +97,22 @@ function ensureArray<T>(data: any): T[] {
   return [];
 }
 
+// Helper para normalizar dados de previsão - aceita tanto array quanto objeto
+function normalizePrevisaoData(data: any): any {
+  if (!data) return [];
+  
+  // Se já é array, retorna como está
+  if (Array.isArray(data)) return data;
+  
+  // Se é objeto com chaves de mês ("jan", "fev", etc), retorna o objeto original
+  // para ser processado pela função extrairPrevisao
+  if (typeof data === "object") {
+    return data;
+  }
+  
+  return [];
+}
+
 export function useSupabaseDashboardData() {
   // Query para previsao_dashboard
   const {
@@ -88,11 +130,11 @@ export function useSupabaseDashboardData() {
 
       if (error) throw error;
 
-      // Parse dos campos JSON com garantia de array
+      // Parse dos campos JSON - normaliza tanto array quanto objeto
       return (data || []).map((item) => ({
         ...item,
-        previsao_2025_parsed: ensureArray<PrevisaoMensal>(item.previsao_2025),
-        previsao_2026_parsed: ensureArray<PrevisaoMensal>(item.previsao_2026),
+        previsao_2025_parsed: normalizePrevisaoData(item.previsao_2025),
+        previsao_2026_parsed: normalizePrevisaoData(item.previsao_2026),
         comparativos_parsed: ensureArray<Comparativo>(item.comparativos),
       })) as DashboardData[];
     },
