@@ -15,11 +15,31 @@ interface DashboardFilterContextType {
 
 const DashboardFilterContext = createContext<DashboardFilterContextType | undefined>(undefined);
 
+// Calcula data atual + 2 meses para filtros iniciais
+function getInitialDateFilters(): { ano: "2025" | "2026" | null; mes: number | null } {
+  const dataAtual = new Date();
+  const dataFutura = new Date();
+  dataFutura.setMonth(dataAtual.getMonth() + 2);
+  
+  const mesInicial = dataFutura.getMonth() + 1; // 1-12
+  const anoInicial = dataFutura.getFullYear();
+  
+  // Apenas definir ano se for 2025 ou 2026
+  const ano = anoInicial === 2025 || anoInicial === 2026 ? String(anoInicial) as "2025" | "2026" : null;
+  
+  return {
+    ano,
+    mes: mesInicial,
+  };
+}
+
+const { ano: anoInicial, mes: mesInicial } = getInitialDateFilters();
+
 const initialFilters: DashboardFilters = {
   produtos: [],
   clientes: [],
-  ano: null,
-  mes: null,
+  ano: anoInicial,
+  mes: mesInicial,
 };
 
 export function DashboardFilterProvider({ children }: { children: ReactNode }) {
