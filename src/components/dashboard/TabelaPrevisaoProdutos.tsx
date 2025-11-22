@@ -149,6 +149,17 @@ export function TabelaPrevisaoProdutos({
     return sorted;
   }, [tableData, sortField, sortDirection]);
 
+  // Filtrar apenas produtos com valores > 0
+  const filteredData = useMemo(() => {
+    return sortedData.filter((row) => {
+      const previsao = Number(row.previsao ?? 0);
+      const realizado = Number(row.realizado ?? 0);
+      const estoque = Number(row.estoque ?? 0);
+      
+      return previsao > 0 || realizado > 0 || estoque > 0;
+    });
+  }, [sortedData]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -161,7 +172,7 @@ export function TabelaPrevisaoProdutos({
   const handleExportExcel = () => {
     try {
       const exportData = formatPrevisaoDataForExport(
-        sortedData,
+        filteredData,
         mesSelecionado,
         anoSelecionado ? parseInt(anoSelecionado) : null
       );
@@ -192,7 +203,7 @@ export function TabelaPrevisaoProdutos({
           variant="outline"
           size="sm"
           className="gap-2"
-          disabled={sortedData.length === 0}
+          disabled={filteredData.length === 0}
         >
           <Download className="h-4 w-4" />
           Exportar para Excel
@@ -268,14 +279,14 @@ export function TabelaPrevisaoProdutos({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   Nenhum produto encontrado com os filtros selecionados
                 </TableCell>
               </TableRow>
             ) : (
-              sortedData.map((row) => (
+              filteredData.map((row) => (
                 <TableRow
                   key={row.id}
                   className={cn(
