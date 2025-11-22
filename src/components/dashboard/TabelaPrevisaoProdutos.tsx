@@ -50,13 +50,29 @@ export function TabelaPrevisaoProdutos({
   const [sortField, setSortField] = useState<SortField>("produto");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Preparar dados da tabela
+  // Preparar dados da tabela com agrupamento por codigo_produto
   const tableData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const defaultAno = anoSelecionado ? parseInt(anoSelecionado) : currentYear;
     const defaultMes = mesSelecionado || new Date().getMonth() + 1;
 
-    return data.map((item) => {
+    // Agrupar por codigo_produto
+    const agrupado: Record<string, {
+      id: string;
+      produto: string;
+      codigo: string;
+      cliente: string;
+      previsao: number;
+      realizado: number;
+      estoque: number;
+      variacao: number;
+      alertas: Set<string>;
+      isPast: boolean;
+      isFuture: boolean;
+      isOperational: boolean;
+    }> = {};
+
+    data.forEach((item) => {
       // 1. Nome do produto limpo
       const produtoLimpo = cleanProductName(item.produto);
 
@@ -64,7 +80,7 @@ export function TabelaPrevisaoProdutos({
       const codigoProduto = item.codigo_produto || "";
       const cliente = item.cliente || "";
 
-      // 3. Previsão do mês selecionado - suporta tanto array quanto objeto
+      // 3. Previsão do mês selecionado
       const previsaoKey = anoSelecionado === "2026" ? "previsao_2026_parsed" : "previsao_2025_parsed";
       const previsaoData = item[previsaoKey];
       const previsaoValor = extrairPrevisao(previsaoData, defaultMes);
@@ -74,9 +90,6 @@ export function TabelaPrevisaoProdutos({
       const isPast = isMonthInPast(defaultMes, defaultAno);
       if (isPast) {
         const { mes: mesPrevio, ano: anoPrevio } = getPreviousMonth(defaultMes, defaultAno);
-        // Tentamos buscar dados reais do ano anterior
-        // Nota: precisa de campo dados_reais_2025 ou dados_reais_2024 na base
-        // Por enquanto, deixaremos como 0 ou podemos buscar do histórico
         realizadoValor = 0; // TODO: implementar busca de dados reais
       }
 
@@ -103,21 +116,38 @@ export function TabelaPrevisaoProdutos({
       const isFuture = isMonthInFuture(defaultMes, defaultAno);
       const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
 
-      return {
-        id: item.id,
-        produto: produtoLimpo,
-        codigo: codigoProduto,
-        cliente,
-        previsao: previsaoValor,
-        realizado: isPast ? realizadoValor : null,
-        estoque: estoqueValor,
-        variacao: variacaoTrimestral,
-        alertas,
-        isPast,
-        isFuture,
-        isOperational,
-      };
+      // Agrupar por codigo_produto
+      if (!agrupado[codigoProduto]) {
+        agrupado[codigoProduto] = {
+          id: item.id,
+          produto: produtoLimpo,
+          codigo: codigoProduto,
+          cliente: cliente,
+          previsao: 0,
+          realizado: 0,
+          estoque: 0,
+          variacao: variacaoTrimestral,
+          alertas: new Set<string>(),
+          isPast,
+          isFuture,
+          isOperational,
+        };
+      }
+
+      // Somar valores
+      agrupado[codigoProduto].previsao += previsaoValor;
+      agrupado[codigoProduto].realizado += realizadoValor;
+      agrupado[codigoProduto].estoque += estoqueValor;
+
+      // Consolidar alertas únicos
+      alertas.forEach((alerta: string) => agrupado[codigoProduto].alertas.add(alerta));
     });
+
+    // Converter para array e transformar Set em array
+    return Object.values(agrupado).map((item) => ({
+      ...item,
+      alertas: Array.from(item.alertas),
+    }));
   }, [data, estoqueAtual, mesSelecionado, anoSelecionado]);
 
   // Ordenação
