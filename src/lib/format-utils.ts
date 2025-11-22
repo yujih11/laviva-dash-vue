@@ -2,7 +2,7 @@
  * Formata números com separador de milhar brasileiro
  */
 export function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || isNaN(value) || value === 0) {
     return "—";
   }
   
