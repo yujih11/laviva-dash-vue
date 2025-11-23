@@ -21,38 +21,24 @@ export function useFilteredDashboardData(
       }
 
       // Filtro de clientes
-      if (filters.clientes.length > 0 && !filters.clientes.includes(item.cliente || "")) {
-        return false;
+      if (filters.clientes.length > 0) {
+        const itemCliente = item.cliente || "";
+        if (!filters.clientes.includes(itemCliente)) {
+          return false;
+        }
       }
 
-      // Filtro de ano - verifica se há dados para o ano selecionado
-      if (filters.ano) {
-        const previsaoKey = filters.ano === "2025" ? "previsao_2025_parsed" : "previsao_2026_parsed";
-        const previsao = item[previsaoKey];
+      // Filtro de ano - verifica se há previsões para o ano selecionado
+      if (filters.ano && item.previsoes) {
+        const hasPrevisoesAno = item.previsoes.some((p) => p.ano === filters.ano);
+        if (!hasPrevisoesAno) return false;
         
-        // Verifica se há dados de previsão
-        if (!previsao) return false;
-        
-        // Suporta tanto array quanto objeto
-        if (Array.isArray(previsao)) {
-          if (previsao.length === 0) return false;
-          
-          // Filtro de mês dentro do ano
-          if (filters.mes) {
-            const mesData = previsao.find((p) => p.mes === filters.mes);
-            if (!mesData) return false;
-          }
-        } else if (typeof previsao === "object") {
-          const valores = Object.keys(previsao);
-          if (valores.length === 0) return false;
-          
-          // Filtro de mês dentro do ano (formato objeto)
-          if (filters.mes) {
-            const nomeMes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][filters.mes - 1];
-            if (!(nomeMes in previsao)) return false;
-          }
-        } else {
-          return false;
+        // Filtro de mês dentro do ano
+        if (filters.mes) {
+          const hasPrevisoesAnoMes = item.previsoes.some(
+            (p) => p.ano === filters.ano && p.mes === String(filters.mes)
+          );
+          if (!hasPrevisoesAnoMes) return false;
         }
       }
 

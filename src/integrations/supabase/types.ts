@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      crescimento_produtos: {
+        Row: {
+          codigo_produto: string
+          percentual_crescimento: number | null
+        }
+        Insert: {
+          codigo_produto: string
+          percentual_crescimento?: number | null
+        }
+        Update: {
+          codigo_produto?: string
+          percentual_crescimento?: number | null
+        }
+        Relationships: []
+      }
       estoque_atual: {
         Row: {
           codigo_produto: string
@@ -230,6 +245,51 @@ export type Database = {
           produto: string | null
           total_quantidade: number | null
           ultima_venda: string | null
+        }
+        Relationships: []
+      }
+      previsao_resumida_por_codigo: {
+        Row: {
+          ano: string | null
+          codigo_produto: string | null
+          mes: string | null
+          previsao_por_cliente: Json | null
+          produto: string | null
+          total_previsto: number | null
+        }
+        Relationships: []
+      }
+      vendas_reais_com_ultima_venda: {
+        Row: {
+          ano: number | null
+          codigo_produto: string | null
+          mes: number | null
+          produto: string | null
+          quantidade_total: number | null
+          ultima_venda: string | null
+          vendas_por_cliente: Json | null
+        }
+        Relationships: []
+      }
+      vendas_reais_resumidas: {
+        Row: {
+          ano: number | null
+          clientes: string[] | null
+          codigo_produto: string | null
+          mes: number | null
+          produto: string | null
+          total_vendido: number | null
+        }
+        Relationships: []
+      }
+      vendas_reais_resumidas_por_codigo: {
+        Row: {
+          ano: number | null
+          codigo_produto: string | null
+          mes: number | null
+          produto: string | null
+          total_vendido: number | null
+          vendas_por_cliente: Json | null
         }
         Relationships: []
       }
