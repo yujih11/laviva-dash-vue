@@ -71,20 +71,21 @@ export function agruparAlertas(data: DashboardData[]): AlertaAgrupado[] {
 
   // Iterar sobre todos os produtos com alertas
   data.forEach((item) => {
-    if (!item.alertas || !Array.isArray(item.alertas) || item.alertas.length === 0) {
+    const alertas = item.alertas || [];
+    if (!Array.isArray(alertas) || alertas.length === 0) {
       return;
     }
 
     const produtoInfo = {
-      id: item.id,
+      id: item.id || item.codigo_produto,
       produto: cleanProductName(item.produto),
       cliente: item.cliente || "Cliente não informado",
       codigo: item.codigo_produto || "",
-      alertas: item.alertas,
+      alertas: alertas,
     };
 
     // Para cada alerta do produto, categorizar e agrupar
-    item.alertas.forEach((alerta) => {
+    alertas.forEach((alerta) => {
       const { tipo, severidade } = categorizarAlerta(alerta);
 
       if (!grupos.has(tipo)) {
@@ -98,7 +99,7 @@ export function agruparAlertas(data: DashboardData[]): AlertaAgrupado[] {
       const grupo = grupos.get(tipo)!;
       
       // Adicionar produto ao grupo se ainda não estiver lá
-      if (!grupo.produtos.find((p) => p.id === item.id)) {
+      if (!grupo.produtos.find((p) => p.id === item.id || p.id === item.codigo_produto)) {
         grupo.produtos.push(produtoInfo);
       }
     });

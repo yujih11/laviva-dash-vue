@@ -15,7 +15,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DashboardData, EstoqueAtual, extrairPrevisao } from "@/hooks/useSupabaseDashboardData";
+import { 
+  DashboardData, 
+  EstoqueAtual, 
+  extrairPrevisao, 
+  extrairVendasReais 
+} from "@/hooks/useSupabaseDashboardData";
 import { cleanProductName } from "@/lib/product-utils";
 import {
   getQuarter,
@@ -50,104 +55,65 @@ export function TabelaPrevisaoProdutos({
   const [sortField, setSortField] = useState<SortField>("produto");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Preparar dados da tabela com agrupamento por codigo_produto
+  // Preparar dados da tabela
   const tableData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const defaultAno = anoSelecionado ? parseInt(anoSelecionado) : currentYear;
     const defaultMes = mesSelecionado || new Date().getMonth() + 1;
 
-    // Agrupar por codigo_produto
-    const agrupado: Record<string, {
-      id: string;
-      produto: string;
-      codigo: string;
-      cliente: string;
-      previsao: number;
-      realizado: number;
-      estoque: number;
-      variacao: number;
-      alertas: Set<string>;
-      isPast: boolean;
-      isFuture: boolean;
-      isOperational: boolean;
-    }> = {};
-
-    data.forEach((item) => {
+    return data.map((item) => {
       // 1. Nome do produto limpo
       const produtoLimpo = cleanProductName(item.produto);
+      const codigoProduto = item.codigo_produto;
 
-      // 2. Código e Cliente
-      const codigoProduto = item.codigo_produto || "";
-      const cliente = item.cliente || "";
+      // 2. Previsão do mês selecionado
+      const previsaoValor = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
 
-      // 3. Previsão do mês selecionado
-      const previsaoKey = anoSelecionado === "2026" ? "previsao_2026_parsed" : "previsao_2025_parsed";
-      const previsaoData = item[previsaoKey];
-      const previsaoValor = extrairPrevisao(previsaoData, defaultMes);
+      // 3. Vendas reais do mês
+      const realizadoValor = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno);
 
-      // 4. Realizado (mês anterior) - apenas se mês for passado
-      let realizadoValor = 0;
-      const isPast = isMonthInPast(defaultMes, defaultAno);
-      if (isPast) {
-        const { mes: mesPrevio, ano: anoPrevio } = getPreviousMonth(defaultMes, defaultAno);
-        realizadoValor = 0; // TODO: implementar busca de dados reais
-      }
-
-      // 5. Estoque Atual
+      // 4. Estoque Atual
       const estoqueItem = estoqueAtual.find((e) => e.codigo_produto === codigoProduto);
       const estoqueValor = estoqueItem?.quantidade_disponivel || 0;
 
-      // 6. Variação Trimestral
-      const trimestre = getQuarter(defaultMes);
-      const comparativos = item.comparativos_parsed || [];
+      // 5. Variação entre previsão e realizado (simplificado)
       let variacaoTrimestral = 0;
-      
-      if (Array.isArray(comparativos)) {
-        const compTrimestre = comparativos.find((c) => 
-          c.periodo && c.periodo.toUpperCase().includes(trimestre)
-        );
-        variacaoTrimestral = compTrimestre?.variacao || 0;
+      if (realizadoValor > 0 && previsaoValor > 0) {
+        variacaoTrimestral = ((realizadoValor - previsaoValor) / previsaoValor) * 100;
       }
 
-      // 7. Alertas
-      const alertas = item.alertas || [];
-
-      // Regras de destaque
+      // 6. Regras de destaque
+      const isPast = isMonthInPast(defaultMes, defaultAno);
       const isFuture = isMonthInFuture(defaultMes, defaultAno);
       const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
 
-      // Agrupar por codigo_produto
-      if (!agrupado[codigoProduto]) {
-        agrupado[codigoProduto] = {
-          id: item.id,
-          produto: produtoLimpo,
-          codigo: codigoProduto,
-          cliente: cliente,
-          previsao: 0,
-          realizado: 0,
-          estoque: 0,
-          variacao: variacaoTrimestral,
-          alertas: new Set<string>(),
-          isPast,
-          isFuture,
-          isOperational,
-        };
+      // 7. Cliente - extrair do jsonb previsao_por_cliente
+      let cliente = "";
+      if (item.previsoes.length > 0) {
+        const previsao = item.previsoes.find(
+          (p) => p.mes === String(defaultMes) && p.ano === String(defaultAno)
+        );
+        if (previsao?.previsao_por_cliente) {
+          const clientes = Object.keys(previsao.previsao_por_cliente);
+          cliente = clientes.length > 0 ? clientes.join(", ") : "";
+        }
       }
 
-      // Somar valores
-      agrupado[codigoProduto].previsao += previsaoValor;
-      agrupado[codigoProduto].realizado += realizadoValor;
-      agrupado[codigoProduto].estoque += estoqueValor;
-
-      // Consolidar alertas únicos
-      alertas.forEach((alerta: string) => agrupado[codigoProduto].alertas.add(alerta));
+      return {
+        id: codigoProduto,
+        produto: produtoLimpo,
+        codigo: codigoProduto,
+        cliente,
+        previsao: previsaoValor,
+        realizado: isPast ? realizadoValor : null,
+        estoque: estoqueValor,
+        variacao: variacaoTrimestral,
+        alertas: [] as string[], // Alertas podem ser calculados posteriormente
+        isPast,
+        isFuture,
+        isOperational,
+      };
     });
-
-    // Converter para array e transformar Set em array
-    return Object.values(agrupado).map((item) => ({
-      ...item,
-      alertas: Array.from(item.alertas),
-    }));
   }, [data, estoqueAtual, mesSelecionado, anoSelecionado]);
 
   // Ordenação

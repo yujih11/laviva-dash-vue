@@ -59,7 +59,9 @@ export function FilterBar({ data }: FilterBarProps) {
   }, [data]);
 
   const clientes = useMemo(() => {
-    const uniqueClientes = [...new Set(data.map((item) => item.cliente).filter(Boolean))];
+    const uniqueClientes = [...new Set(
+      data.map((item) => item.cliente).filter(Boolean) as string[]
+    )];
     return uniqueClientes.sort();
   }, [data]);
 

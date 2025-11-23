@@ -55,31 +55,22 @@ const Index = () => {
   // 3. Previsão 2025 - calcular baseado no mês selecionado (se houver) ou soma total
   const { filters } = useDashboardFilters();
   const previsao2025Total = filteredDashboard.reduce((acc, item) => {
-    const previsoes = item.previsao_2025_parsed;
-    
-    if (!previsoes) return acc;
+    if (!item.previsoes) return acc;
 
     // Se há mês selecionado, somar apenas esse mês
     if (filters.mes !== null) {
-      // Suporta tanto array quanto objeto
-      if (Array.isArray(previsoes)) {
-        const mesData = previsoes.find((p) => p.mes === filters.mes);
-        return acc + Number(mesData?.quantidade ?? 0);
-      } else if (typeof previsoes === "object") {
-        const nomeMes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][filters.mes - 1];
-        return acc + Number((previsoes as Record<string, any>)[nomeMes] ?? 0);
-      }
+      const previsaoMes = item.previsoes.find(
+        (p) => p.mes === String(filters.mes) && p.ano === "2025"
+      );
+      return acc + Number(previsaoMes?.total_previsto ?? 0);
     }
 
-    // Caso contrário, somar todos os meses
-    if (Array.isArray(previsoes)) {
-      return acc + previsoes.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
-    } else if (typeof previsoes === "object") {
-      const valores = Object.values(previsoes as Record<string, any>);
-      return acc + valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
-    }
+    // Caso contrário, somar todos os meses de 2025
+    const total2025 = item.previsoes
+      .filter((p) => p.ano === "2025")
+      .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
     
-    return acc;
+    return acc + total2025;
   }, 0);
 
   // 4. Alertas - contar total de alertas
@@ -278,21 +269,21 @@ const Index = () => {
                 <div className="space-y-4">
                   {filteredDashboard.slice(0, 5).map((item) => (
                     <div
-                      key={item.id}
+                      key={item.id || item.codigo_produto}
                       className="border border-border rounded-lg p-4 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-semibold text-foreground">{cleanProductName(item.produto)}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {item.cliente} • {item.codigo_produto}
+                            {item.cliente || "—"} • {item.codigo_produto}
                           </p>
                         </div>
-                        {item.crescimento_manual && (
+                        {item.crescimento_percentual && (
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Crescimento</p>
                             <p className="text-lg font-bold text-primary">
-                              {(item.crescimento_manual * 100).toFixed(1)}%
+                              {item.crescimento_percentual.toFixed(1)}%
                             </p>
                           </div>
                         )}
@@ -303,19 +294,10 @@ const Index = () => {
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2025</p>
                           <p className="text-2xl font-bold text-foreground">
                             {(() => {
-                              const prev = item.previsao_2025_parsed;
-                              if (!prev) return "0";
-                              
-                              if (Array.isArray(prev)) {
-                                const total = prev.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
-                                return total.toLocaleString("pt-BR");
-                              } else if (typeof prev === "object") {
-                                const valores = Object.values(prev as Record<string, any>);
-                                const total = valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
-                                return total.toLocaleString("pt-BR");
-                              }
-                              
-                              return "0";
+                              const total = item.previsoes
+                                .filter((p) => p.ano === "2025")
+                                .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
+                              return total.toLocaleString("pt-BR");
                             })()}
                           </p>
                         </div>
@@ -323,19 +305,10 @@ const Index = () => {
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2026</p>
                           <p className="text-2xl font-bold text-foreground">
                             {(() => {
-                              const prev = item.previsao_2026_parsed;
-                              if (!prev) return "0";
-                              
-                              if (Array.isArray(prev)) {
-                                const total = prev.reduce((sum, p) => sum + Number(p.quantidade ?? 0), 0);
-                                return total.toLocaleString("pt-BR");
-                              } else if (typeof prev === "object") {
-                                const valores = Object.values(prev as Record<string, any>);
-                                const total = valores.reduce((sum: number, v: any) => sum + Number(v ?? 0), 0);
-                                return total.toLocaleString("pt-BR");
-                              }
-                              
-                              return "0";
+                              const total = item.previsoes
+                                .filter((p) => p.ano === "2026")
+                                .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
+                              return total.toLocaleString("pt-BR");
                             })()}
                           </p>
                         </div>

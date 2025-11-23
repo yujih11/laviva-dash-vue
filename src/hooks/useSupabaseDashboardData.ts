@@ -2,49 +2,44 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-// Helper para converter número do mês em nome de 3 letras minúsculo
-export const mesParaNome = (mes: number): string => {
-  const nomes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-  return nomes[mes - 1] || "";
-};
-
-// Helper para extrair valor de previsão de forma segura
-export const extrairPrevisao = (previsaoData: any, mes: number): number => {
-  if (!previsaoData) return 0;
-  
-  // Se for array (formato novo)
-  if (Array.isArray(previsaoData)) {
-    const mesData = previsaoData.find((p) => p.mes === mes);
-    return Number(mesData?.quantidade ?? 0);
-  }
-  
-  // Se for objeto (formato antigo com chaves "jan", "fev", etc)
-  if (typeof previsaoData === "object") {
-    const nomeMes = mesParaNome(mes);
-    const valor = previsaoData[nomeMes];
-    return Number(valor ?? 0);
-  }
-  
-  return 0;
-};
-
-// Tipos para os dados parseados de JSON
-export interface PrevisaoMensal {
-  mes: number;
-  quantidade: number;
-  valor?: number;
+// Tipos para os dados das novas tabelas
+export interface VendasReais {
+  codigo_produto: string | null;
+  produto: string | null;
+  ano: number | null;
+  mes: number | null;
+  total_vendido: number | null;
+  vendas_por_cliente: any; // jsonb com detalhes por cliente
 }
 
-export interface Comparativo {
-  periodo: string;
-  variacao: number;
-  tipo?: string;
+export interface PrevisaoResumida {
+  codigo_produto: string | null;
+  produto: string | null;
+  ano: string | null;
+  mes: string | null;
+  total_previsto: number | null;
+  previsao_por_cliente: any; // jsonb com detalhes por cliente
 }
 
-export interface DashboardData extends Omit<Tables<"previsao_dashboard">, "previsao_2025" | "previsao_2026" | "comparativos"> {
-  previsao_2025_parsed: PrevisaoMensal[] | Record<string, number> | null;
-  previsao_2026_parsed: PrevisaoMensal[] | Record<string, number> | null;
-  comparativos_parsed: Comparativo[] | null;
+export interface CrescimentoProduto {
+  codigo_produto: string;
+  percentual_crescimento: number | null;
+}
+
+// Interface principal para o dashboard
+export interface DashboardData {
+  id?: string; // Para compatibilidade
+  codigo_produto: string;
+  produto: string;
+  cliente?: string; // Extraído dinamicamente dos dados
+  vendas_reais: VendasReais[];
+  previsoes: PrevisaoResumida[];
+  crescimento_percentual: number | null;
+  crescimento_manual?: number | null; // Alias para compatibilidade
+  alertas?: string[]; // Calculado dinamicamente
+  // Compatibilidade com código antigo
+  previsao_2025_parsed?: any;
+  previsao_2026_parsed?: any;
 }
 
 export interface EstoqueAtual extends Tables<"estoque_atual"> {}
@@ -57,88 +52,79 @@ export interface EstoqueResumido {
   estoque_disponivel: number | null;
 }
 
-// Função helper para parse seguro de JSON com validação de array
-function safeJsonParse<T>(data: any): T | null {
-  if (!data) return null;
-  
-  // Se já é um objeto, retorna diretamente
-  if (typeof data === "object" && !Array.isArray(data) && data !== null) {
-    return data as T;
-  }
-  
-  // Se é string, tenta fazer parse
-  if (typeof data === "string") {
-    try {
-      return JSON.parse(data) as T;
-    } catch {
-      return null;
-    }
-  }
-  
-  // Se já é array, retorna diretamente
-  if (Array.isArray(data)) {
-    return data as T;
-  }
-  
-  return null;
-}
+// Helper para extrair valor de previsão do mês
+export const extrairPrevisao = (previsoes: PrevisaoResumida[], mes: number, ano: number): number => {
+  const previsao = previsoes.find(
+    (p) => p.mes === String(mes) && p.ano === String(ano)
+  );
+  return Number(previsao?.total_previsto ?? 0);
+};
 
-// Helper para garantir que o resultado é um array
-function ensureArray<T>(data: any): T[] {
-  if (Array.isArray(data)) return data;
-  if (!data) return [];
-  // Se for um objeto com propriedades numéricas, converte para array
-  if (typeof data === "object") {
-    const values = Object.values(data);
-    if (values.length > 0 && values.every(v => typeof v === "object")) {
-      return values as T[];
-    }
-  }
-  return [];
-}
-
-// Helper para normalizar dados de previsão - aceita tanto array quanto objeto
-function normalizePrevisaoData(data: any): any {
-  if (!data) return [];
-  
-  // Se já é array, retorna como está
-  if (Array.isArray(data)) return data;
-  
-  // Se é objeto com chaves de mês ("jan", "fev", etc), retorna o objeto original
-  // para ser processado pela função extrairPrevisao
-  if (typeof data === "object") {
-    return data;
-  }
-  
-  return [];
-}
+// Helper para extrair vendas reais do mês
+export const extrairVendasReais = (vendas: VendasReais[], mes: number, ano: number): number => {
+  const venda = vendas.find(
+    (v) => v.mes === mes && v.ano === ano
+  );
+  return Number(venda?.total_vendido ?? 0);
+};
 
 export function useSupabaseDashboardData() {
-  // Query para previsao_dashboard
+  // Query para vendas reais resumidas por código
   const {
-    data: dashboardData,
-    isLoading: dashboardLoading,
-    error: dashboardError,
-    refetch: refetchDashboard,
+    data: vendasReais,
+    isLoading: vendasLoading,
+    error: vendasError,
   } = useQuery({
-    queryKey: ["previsao_dashboard"],
+    queryKey: ["vendas_reais_resumidas_por_codigo"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("previsao_dashboard")
+        .from("vendas_reais_resumidas_por_codigo")
         .select("*")
-        .order("data_atualizacao", { ascending: false });
+        .order("codigo_produto", { ascending: true });
 
       if (error) throw error;
-
-      // Parse dos campos JSON - normaliza tanto array quanto objeto
-      return (data || []).map((item) => ({
-        ...item,
-        previsao_2025_parsed: normalizePrevisaoData(item.previsao_2025),
-        previsao_2026_parsed: normalizePrevisaoData(item.previsao_2026),
-        comparativos_parsed: ensureArray<Comparativo>(item.comparativos),
-      })) as DashboardData[];
+      return (data || []) as VendasReais[];
     },
-    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+
+  // Query para previsões resumidas por código
+  const {
+    data: previsoes,
+    isLoading: previsoesLoading,
+    error: previsoesError,
+  } = useQuery({
+    queryKey: ["previsao_resumida_por_codigo"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("previsao_resumida_por_codigo")
+        .select("*")
+        .order("codigo_produto", { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as PrevisaoResumida[];
+    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+
+  // Query para crescimento de produtos
+  const {
+    data: crescimentos,
+    isLoading: crescimentosLoading,
+    error: crescimentosError,
+  } = useQuery({
+    queryKey: ["crescimento_produtos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crescimento_produtos")
+        .select("*");
+
+      if (error) throw error;
+      return (data || []) as CrescimentoProduto[];
+    },
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 
@@ -163,6 +149,67 @@ export function useSupabaseDashboardData() {
     refetchOnWindowFocus: false,
   });
 
+  // Combinar dados em estrutura consolidada
+  const dashboardData: DashboardData[] = [];
+  
+  // Agrupar por código de produto
+  const codigosProdutos = new Set<string>();
+  vendasReais?.forEach((v) => v.codigo_produto && codigosProdutos.add(v.codigo_produto));
+  previsoes?.forEach((p) => p.codigo_produto && codigosProdutos.add(p.codigo_produto));
+
+  codigosProdutos.forEach((codigo) => {
+    const vendas = vendasReais?.filter((v) => v.codigo_produto === codigo) || [];
+    const prevs = previsoes?.filter((p) => p.codigo_produto === codigo) || [];
+    const crescimento = crescimentos?.find((c) => c.codigo_produto === codigo);
+    
+    // Pegar nome do produto (de vendas ou previsões)
+    const produto = vendas[0]?.produto || prevs[0]?.produto || codigo;
+
+    // Extrair clientes únicos das previsões
+    const clientesSet = new Set<string>();
+    prevs.forEach((p) => {
+      if (p.previsao_por_cliente) {
+        Object.keys(p.previsao_por_cliente).forEach((c) => clientesSet.add(c));
+      }
+    });
+    const cliente = Array.from(clientesSet).join(", ");
+
+    // Calcular previsões por ano para compatibilidade
+    const previsao_2025 = prevs
+      .filter((p) => p.ano === "2025")
+      .reduce((acc, p) => {
+        const mes = Number(p.mes);
+        if (!isNaN(mes)) {
+          acc[mes] = (acc[mes] || 0) + Number(p.total_previsto || 0);
+        }
+        return acc;
+      }, {} as Record<number, number>);
+
+    const previsao_2026 = prevs
+      .filter((p) => p.ano === "2026")
+      .reduce((acc, p) => {
+        const mes = Number(p.mes);
+        if (!isNaN(mes)) {
+          acc[mes] = (acc[mes] || 0) + Number(p.total_previsto || 0);
+        }
+        return acc;
+      }, {} as Record<number, number>);
+
+    dashboardData.push({
+      id: codigo,
+      codigo_produto: codigo,
+      produto,
+      cliente,
+      vendas_reais: vendas,
+      previsoes: prevs,
+      crescimento_percentual: crescimento?.percentual_crescimento ?? 10, // Default 10%
+      crescimento_manual: (crescimento?.percentual_crescimento ?? 10) / 100, // Para compatibilidade
+      alertas: [], // Pode ser calculado posteriormente
+      previsao_2025_parsed: previsao_2025,
+      previsao_2026_parsed: previsao_2026,
+    });
+  });
+
   // Função para carregar estoque resumido sob demanda
   const loadEstoqueResumido = async (): Promise<EstoqueResumido[]> => {
     const { data, error } = await supabase
@@ -174,17 +221,16 @@ export function useSupabaseDashboardData() {
     return (data || []) as EstoqueResumido[];
   };
 
-  const loading = dashboardLoading || estoqueLoading;
-  const error = dashboardError || estoqueError;
+  const loading = vendasLoading || previsoesLoading || crescimentosLoading || estoqueLoading;
+  const error = vendasError || previsoesError || crescimentosError || estoqueError;
 
   return {
-    dashboardData: dashboardData || [],
+    dashboardData,
     estoqueAtual: estoqueAtual || [],
     loadEstoqueResumido,
     loading,
     error,
     refetch: () => {
-      refetchDashboard();
       refetchEstoque();
     },
   };
