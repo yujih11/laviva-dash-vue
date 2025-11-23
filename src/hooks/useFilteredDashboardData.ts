@@ -10,20 +10,19 @@ export function useFilteredDashboardData(
 
   const filteredDashboard = useMemo(() => {
     return dashboardData.filter((item) => {
-      const cleanedProduto = item.produto?.trim() || "";
-      
-      // Filtro de produtos (comparar com nome limpo)
+      // Filtro de produtos (comparar por codigo_produto único)
       if (filters.produtos.length > 0) {
         const matchesProduto = filters.produtos.some(
-          (filterProduto) => cleanedProduto.includes(filterProduto) || filterProduto.includes(cleanedProduto)
+          (filterProduto) => item.codigo_produto === filterProduto
         );
         if (!matchesProduto) return false;
       }
 
-      // Filtro de clientes
+      // Filtro de clientes - verificar se algum cliente do item está nos filtros
       if (filters.clientes.length > 0) {
-        const itemCliente = item.cliente || "";
-        if (!filters.clientes.includes(itemCliente)) {
+        const itemClientes = item.cliente?.split(",").map(c => c.trim()) || [];
+        const hasMatchingCliente = itemClientes.some(c => filters.clientes.includes(c));
+        if (!hasMatchingCliente) {
           return false;
         }
       }
@@ -48,12 +47,10 @@ export function useFilteredDashboardData(
 
   const filteredEstoque = useMemo(() => {
     return estoqueAtual.filter((item) => {
-      const cleanedProduto = item.produto?.trim() || "";
-      
-      // Filtro de produtos (comparar com nome limpo)
+      // Filtro de produtos (comparar por codigo_produto único)
       if (filters.produtos.length > 0) {
         const matchesProduto = filters.produtos.some(
-          (filterProduto) => cleanedProduto.includes(filterProduto) || filterProduto.includes(cleanedProduto)
+          (filterProduto) => item.codigo_produto === filterProduto
         );
         if (!matchesProduto) return false;
       }

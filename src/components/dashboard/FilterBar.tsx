@@ -50,19 +50,28 @@ const meses = [
 export function FilterBar({ data }: FilterBarProps) {
   const { filters, setFilters, resetFilters } = useDashboardFilters();
 
-  // Extrair listas únicas de produtos e clientes
+  // Extrair listas únicas de produtos (por codigo_produto)
   const produtos = useMemo(() => {
-    const uniqueProdutos = [...new Set(
-      data.map((item) => cleanProductName(item.produto)).filter(Boolean)
-    )];
-    return uniqueProdutos.sort();
+    const produtosMap = new Map<string, string>();
+    data.forEach((item) => {
+      if (item.codigo_produto && item.produto) {
+        produtosMap.set(item.codigo_produto, cleanProductName(item.produto));
+      }
+    });
+    return Array.from(produtosMap.entries())
+      .map(([codigo, nome]) => ({ codigo, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [data]);
 
+  // Extrair lista única de clientes (separar strings concatenadas)
   const clientes = useMemo(() => {
-    const uniqueClientes = [...new Set(
-      data.map((item) => item.cliente).filter(Boolean) as string[]
-    )];
-    return uniqueClientes.sort();
+    const clientesSet = new Set<string>();
+    data.forEach((item) => {
+      if (item.cliente) {
+        item.cliente.split(",").forEach(c => clientesSet.add(c.trim()));
+      }
+    });
+    return Array.from(clientesSet).filter(Boolean).sort();
   }, [data]);
 
   // Verificar se há filtros ativos
@@ -114,7 +123,7 @@ export function FilterBar({ data }: FilterBarProps) {
                 <Package className="h-3.5 w-3.5 opacity-70" />
                 Produtos
               </Label>
-              <MultiSelectFilter
+              <MultiSelectFilterProdutos
                 options={produtos}
                 selected={filters.produtos}
                 onSelect={(value) =>
@@ -209,7 +218,72 @@ export function FilterBar({ data }: FilterBarProps) {
   );
 }
 
-// Componente auxiliar para multi-select
+// Componente auxiliar para multi-select de produtos (com codigo e nome)
+interface MultiSelectFilterProdutosProps {
+  options: Array<{ codigo: string; nome: string }>;
+  selected: string[];
+  onSelect: (value: string) => void;
+  placeholder: string;
+}
+
+function MultiSelectFilterProdutos({
+  options,
+  selected,
+  onSelect,
+  placeholder,
+}: MultiSelectFilterProdutosProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-start bg-background hover:bg-muted/50 text-foreground placeholder:text-muted-foreground/80"
+        >
+          <span className="truncate text-muted-foreground/80">
+            {selected.length > 0
+              ? `${selected.length} item${selected.length > 1 ? "s" : ""} selecionado${selected.length > 1 ? "s" : ""}`
+              : placeholder}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[350px] p-0 bg-popover" align="start">
+        <Command className="bg-popover">
+          <CommandInput placeholder="Buscar produto..." className="text-foreground placeholder:text-muted-foreground/80" />
+          <CommandList>
+            <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.codigo}
+                  value={option.nome}
+                  onSelect={() => onSelect(option.codigo)}
+                  className="cursor-pointer"
+                >
+                  <div
+                    className={cn(
+                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                      selected.includes(option.codigo)
+                        ? "bg-primary text-primary-foreground"
+                        : "opacity-50 [&_svg]:invisible"
+                    )}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="truncate">{option.nome}</span>
+                    <span className="text-xs text-muted-foreground">{option.codigo}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Componente auxiliar para multi-select genérico
 interface MultiSelectFilterProps {
   options: string[];
   selected: string[];
