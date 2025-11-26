@@ -16,15 +16,21 @@ export type Database = {
     Tables: {
       crescimento_produtos: {
         Row: {
+          ano: number | null
           codigo_produto: string
+          mes: number | null
           percentual_crescimento: number | null
         }
         Insert: {
+          ano?: number | null
           codigo_produto: string
+          mes?: number | null
           percentual_crescimento?: number | null
         }
         Update: {
+          ano?: number | null
           codigo_produto?: string
+          mes?: number | null
           percentual_crescimento?: number | null
         }
         Relationships: []
