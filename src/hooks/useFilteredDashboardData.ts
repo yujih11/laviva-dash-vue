@@ -29,14 +29,25 @@ export function useFilteredDashboardData(
 
       // Filtro de ano - verifica se há previsões para o ano selecionado
       if (filters.ano && item.previsoes) {
-        const hasPrevisoesAno = item.previsoes.some((p) => p.ano === filters.ano);
+        const hasPrevisoesAno = item.previsoes.some((p) => {
+          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+          return anoNum === parseInt(filters.ano);
+        });
         if (!hasPrevisoesAno) return false;
         
         // Filtro de mês dentro do ano
         if (filters.mes) {
-          const hasPrevisoesAnoMes = item.previsoes.some(
-            (p) => p.ano === filters.ano && p.mes === String(filters.mes)
-          );
+          const mesMap: Record<string, number> = {
+            'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+          };
+          
+          const hasPrevisoesAnoMes = item.previsoes.some((p) => {
+            const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+            const mesStr = String(p.mes).toLowerCase();
+            const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
+            return anoNum === parseInt(filters.ano) && mesNum === filters.mes;
+          });
           if (!hasPrevisoesAnoMes) return false;
         }
       }

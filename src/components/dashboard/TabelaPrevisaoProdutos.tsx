@@ -90,9 +90,18 @@ export function TabelaPrevisaoProdutos({
       // 7. Cliente - extrair do jsonb previsao_por_cliente
       let cliente = "";
       if (item.previsoes.length > 0) {
-        const previsao = item.previsoes.find(
-          (p) => p.mes === String(defaultMes) && p.ano === String(defaultAno)
-        );
+        const mesMap: Record<string, number> = {
+          'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+          'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+        };
+        
+        const previsao = item.previsoes.find((p) => {
+          const mesStr = String(p.mes).toLowerCase();
+          const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
+          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+          return mesNum === defaultMes && anoNum === defaultAno;
+        });
+        
         if (previsao?.previsao_por_cliente) {
           const clientes = Object.keys(previsao.previsao_por_cliente);
           cliente = clientes.length > 0 ? clientes.join(", ") : "";
@@ -145,15 +154,9 @@ export function TabelaPrevisaoProdutos({
     return sorted;
   }, [tableData, sortField, sortDirection]);
 
-  // Filtrar apenas produtos com valores > 0
+  // Retornar todos os dados ordenados (não filtrar por valores zero)
   const filteredData = useMemo(() => {
-    return sortedData.filter((row) => {
-      const previsao = Number(row.previsao ?? 0);
-      const realizado = Number(row.realizado ?? 0);
-      const estoque = Number(row.estoque ?? 0);
-      
-      return previsao > 0 || realizado > 0 || estoque > 0;
-    });
+    return sortedData;
   }, [sortedData]);
 
   const handleSort = (field: SortField) => {
