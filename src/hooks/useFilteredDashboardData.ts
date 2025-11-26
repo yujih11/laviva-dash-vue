@@ -27,8 +27,30 @@ export function useFilteredDashboardData(
         }
       }
 
-      // Não filtrar por ano/mês - mostrar todos os produtos mesmo sem previsão
-      // O filtro de ano/mês é apenas para exibir os valores corretos na tabela
+      // Filtro de ano - verifica se há previsões para o ano selecionado
+      if (filters.ano && item.previsoes) {
+        const hasPrevisoesAno = item.previsoes.some((p) => {
+          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+          return anoNum === parseInt(filters.ano);
+        });
+        if (!hasPrevisoesAno) return false;
+        
+        // Filtro de mês dentro do ano
+        if (filters.mes) {
+          const mesMap: Record<string, number> = {
+            'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+          };
+          
+          const hasPrevisoesAnoMes = item.previsoes.some((p) => {
+            const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+            const mesStr = String(p.mes).toLowerCase();
+            const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
+            return anoNum === parseInt(filters.ano) && mesNum === filters.mes;
+          });
+          if (!hasPrevisoesAnoMes) return false;
+        }
+      }
 
       return true;
     });

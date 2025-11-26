@@ -70,22 +70,10 @@ export default function ProdutoDetalhes() {
           .eq("codigo_produto", codigoProduto)
           .single();
 
-        // Definir nome do produto (buscar de qualquer fonte disponível)
-        let nomeProduto = "";
         if (previsoesData && previsoesData.length > 0) {
-          nomeProduto = previsoesData[0].produto || "";
+          setProdutoNome(cleanProductName(previsoesData[0].produto || ""));
           setPrevisoes(previsoesData as PrevisaoData[]);
         }
-        if (!nomeProduto && vendasData && vendasData.length > 0) {
-          nomeProduto = vendasData[0].produto || "";
-        }
-        if (!nomeProduto && estoqueData) {
-          nomeProduto = estoqueData.produto || "";
-        }
-        if (!nomeProduto) {
-          nomeProduto = codigoProduto || "";
-        }
-        setProdutoNome(cleanProductName(nomeProduto));
 
         if (vendasData) {
           setVendasReais(vendasData as VendasData[]);
