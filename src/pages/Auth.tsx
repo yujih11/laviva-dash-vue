@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import lavivaLogo from "@/assets/laviva-logo.png";
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
@@ -97,9 +98,9 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/src/assets/laviva-logo.png" 
+            src={lavivaLogo} 
             alt="LAVIVA" 
-            className="h-16 mx-auto mb-4"
+            className="h-24 mx-auto mb-4"
           />
           <h1 className="text-3xl font-bold text-foreground">Dashboard LAVIVA</h1>
           <p className="text-muted-foreground mt-2">Sistema de previsão e controle de produção</p>
