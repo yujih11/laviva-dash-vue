@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { calcularAlertas } from "@/lib/alertas-utils";
 import { MiniGraficoComparacao } from "./MiniGraficoComparacao";
-import { EditarCrescimentoDialog } from "./EditarCrescimentoDialog";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -42,7 +43,7 @@ import {
 } from "@/lib/date-utils";
 import { formatNumber, formatPercentage, getVariationColor } from "@/lib/format-utils";
 import { exportToExcel, formatPrevisaoDataForExport } from "@/lib/excel-export";
-import { ArrowUpDown, TrendingUp, TrendingDown, AlertTriangle, Info, Download, MoreVertical, Edit } from "lucide-react";
+import { ArrowUpDown, TrendingUp, TrendingDown, AlertTriangle, Info, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -62,14 +63,12 @@ export function TabelaPrevisaoProdutos({
   mesSelecionado,
   anoSelecionado,
 }: TabelaPrevisaoProdutosProps) {
+  const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>("produto");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [alertasMap, setAlertasMap] = useState<Map<string, string[]>>(new Map());
-  const [editandoCrescimento, setEditandoCrescimento] = useState<{
-    codigo: string;
-    nome: string;
-    crescimento: number | null;
-  } | null>(null);
+  const [editandoCodigo, setEditandoCodigo] = useState<string | null>(null);
+  const [editandoValor, setEditandoValor] = useState<string>("");
   const { filters } = useDashboardFilters();
 
   // Calcular alertas quando os dados mudarem
@@ -232,6 +231,52 @@ export function TabelaPrevisaoProdutos({
     }
   };
 
+  const handleIniciarEdicao = (codigo: string, crescimentoAtual: number) => {
+    setEditandoCodigo(codigo);
+    setEditandoValor(String(crescimentoAtual));
+  };
+
+  const handleSalvarCrescimento = async (codigo: string) => {
+    const novoValor = parseFloat(editandoValor);
+    if (isNaN(novoValor)) {
+      toast.error("Valor inválido", {
+        description: "Digite um número válido para o percentual de crescimento.",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("crescimento_produtos")
+        .upsert(
+          {
+            codigo_produto: codigo,
+            percentual_crescimento: novoValor,
+          },
+          { onConflict: "codigo_produto" }
+        );
+
+      if (error) throw error;
+
+      toast.success("Crescimento atualizado", {
+        description: "O percentual foi salvo com sucesso.",
+      });
+
+      setEditandoCodigo(null);
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao atualizar crescimento:", error);
+      toast.error("Erro ao salvar", {
+        description: "Não foi possível atualizar o crescimento.",
+      });
+    }
+  };
+
+  const handleCancelarEdicao = () => {
+    setEditandoCodigo(null);
+    setEditandoValor("");
+  };
+
   return (
     <>
     <div className="space-y-4">
@@ -299,7 +344,21 @@ export function TabelaPrevisaoProdutos({
                   <ArrowUpDown className="h-3 w-3" />
                 </button>
               </TableHead>
-              <TableHead className="text-right">Crescimento</TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 justify-end cursor-help">
+                        Crescimento
+                        <Info className="h-3 w-3" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-popover">
+                      <p>Clique no valor para editar o percentual de crescimento</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="text-right">
                 <TooltipProvider>
                   <Tooltip>
@@ -316,7 +375,7 @@ export function TabelaPrevisaoProdutos({
                 </TooltipProvider>
               </TableHead>
               <TableHead>Alerta</TableHead>
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -353,7 +412,45 @@ export function TabelaPrevisaoProdutos({
                   </TableCell>
                   <TableCell className="text-right">{formatNumber(row.estoque)}</TableCell>
                   <TableCell className="text-right">
-                    <span className="text-sm font-medium">{row.crescimento}%</span>
+                    {editandoCodigo === row.codigo ? (
+                      <div className="flex items-center gap-1 justify-end">
+                        <input
+                          type="number"
+                          value={editandoValor}
+                          onChange={(e) => setEditandoValor(e.target.value)}
+                          className="w-16 px-2 py-1 text-sm border rounded text-right"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSalvarCrescimento(row.codigo);
+                            if (e.key === "Escape") handleCancelarEdicao();
+                          }}
+                        />
+                        <span className="text-sm">%</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleSalvarCrescimento(row.codigo)}
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={handleCancelarEdicao}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleIniciarEdicao(row.codigo, row.crescimento)}
+                        className="text-sm font-medium hover:underline cursor-pointer"
+                      >
+                        {row.crescimento}%
+                      </button>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <MiniGraficoComparacao
@@ -391,28 +488,16 @@ export function TabelaPrevisaoProdutos({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            setEditandoCrescimento({
-                              codigo: row.codigo,
-                              nome: row.produto,
-                              crescimento: row.crescimento,
-                            })
-                          }
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar Crescimento
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/produto/${row.codigo}`)}
+                      className="gap-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver Detalhes
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -422,21 +507,6 @@ export function TabelaPrevisaoProdutos({
       </div>
     </div>
     </div>
-
-      {/* Dialog para editar crescimento */}
-      {editandoCrescimento && (
-        <EditarCrescimentoDialog
-          open={!!editandoCrescimento}
-          onOpenChange={(open) => !open && setEditandoCrescimento(null)}
-          codigoProduto={editandoCrescimento.codigo}
-          produtoNome={editandoCrescimento.nome}
-          crescimentoAtual={editandoCrescimento.crescimento}
-          onSuccess={() => {
-            // Recarregar dados (você pode passar um callback de refetch como prop)
-            window.location.reload();
-          }}
-        />
-      )}
     </>
   );
 }

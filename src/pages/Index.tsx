@@ -104,6 +104,18 @@ const Index = () => {
       <FilterBar data={dashboardData} />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Botão de Estoque Total */}
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/estoque-resumido")}
+            className="gap-2"
+          >
+            <Package className="h-4 w-4" />
+            Ver Estoque Total
+          </Button>
+        </div>
+
         {/* Stats Grid */}
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading ? (
@@ -225,23 +237,11 @@ const Index = () => {
         <section>
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Estoque Atual
-                  </CardTitle>
-                  <CardDescription>Visualização dos itens em estoque</CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/estoque-resumido")}
-                  className="gap-2"
-                >
-                  <Package className="h-4 w-4" />
-                  Ver Estoque Total
-                </Button>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Estoque Atual
+              </CardTitle>
+              <CardDescription>Visualização dos itens em estoque</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
