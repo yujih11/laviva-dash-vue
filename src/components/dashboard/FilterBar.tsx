@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { DashboardData } from "@/hooks/useSupabaseDashboardData";
 import { cleanProductName } from "@/lib/product-utils";
@@ -24,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, X, Filter, Calendar, Package, Users } from "lucide-react";
+import { Check, X, Filter, Calendar, Package, Users, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
@@ -49,6 +50,7 @@ const meses = [
 
 export function FilterBar({ data }: FilterBarProps) {
   const { filters, setFilters, resetFilters } = useDashboardFilters();
+  const navigate = useNavigate();
 
   // Extrair listas únicas de produtos (por codigo_produto)
   const produtos = useMemo(() => {
@@ -102,17 +104,22 @@ export function FilterBar({ data }: FilterBarProps) {
                 </Badge>
               )}
             </div>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-8 gap-1 text-xs"
-              >
-                <X className="h-3 w-3" />
-                Limpar filtros
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {filters.produtos.length > 0 && (
+                <VerDetalhesButton produtos={produtos} selectedCodigos={filters.produtos} navigate={navigate} />
+              )}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-8 gap-1 text-xs"
+                >
+                  <X className="h-3 w-3" />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Grid de Filtros */}
@@ -335,6 +342,68 @@ function MultiSelectFilter({
                     <Check className="h-3 w-3" />
                   </div>
                   <span className="truncate">{option}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Componente para o botão "Ver Detalhes"
+interface VerDetalheButtonProps {
+  produtos: Array<{ codigo: string; nome: string }>;
+  selectedCodigos: string[];
+  navigate: (path: string) => void;
+}
+
+function VerDetalhesButton({ produtos, selectedCodigos, navigate }: VerDetalheButtonProps) {
+  const selectedProdutos = produtos.filter(p => selectedCodigos.includes(p.codigo));
+  
+  if (selectedCodigos.length === 1) {
+    return (
+      <Button
+        size="sm"
+        onClick={() => navigate(`/produto/${selectedCodigos[0]}`)}
+        className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        <Eye className="h-3.5 w-3.5" />
+        Ver Detalhes
+      </Button>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm"
+          className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Ver Detalhes ({selectedCodigos.length})
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0 bg-popover" align="end">
+        <Command className="bg-popover">
+          <CommandInput placeholder="Buscar produto..." className="text-foreground placeholder:text-muted-foreground/80" />
+          <CommandList>
+            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            <CommandGroup>
+              {selectedProdutos.map((produto) => (
+                <CommandItem
+                  key={produto.codigo}
+                  value={produto.nome}
+                  onSelect={() => navigate(`/produto/${produto.codigo}`)}
+                  className="cursor-pointer"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="truncate">{produto.nome}</span>
+                    <span className="text-xs text-muted-foreground">{produto.codigo}</span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
