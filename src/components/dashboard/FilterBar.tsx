@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { DashboardData } from "@/hooks/useSupabaseDashboardData";
 import { cleanProductName } from "@/lib/product-utils";
@@ -24,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, X, Filter, Calendar, Package, Users } from "lucide-react";
+import { Check, X, Filter, Calendar, Package, Users, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
@@ -49,6 +50,7 @@ const meses = [
 
 export function FilterBar({ data }: FilterBarProps) {
   const { filters, setFilters, resetFilters } = useDashboardFilters();
+  const navigate = useNavigate();
 
   // Extrair listas únicas de produtos (por codigo_produto)
   const produtos = useMemo(() => {
@@ -102,17 +104,30 @@ export function FilterBar({ data }: FilterBarProps) {
                 </Badge>
               )}
             </div>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-8 gap-1 text-xs"
-              >
-                <X className="h-3 w-3" />
-                Limpar filtros
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {filters.produtos.length === 1 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate(`/produto-detalhes/${filters.produtos[0]}`)}
+                  className="h-8 gap-1 text-xs"
+                >
+                  <Eye className="h-3 w-3" />
+                  Ver Detalhes
+                </Button>
+              )}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-8 gap-1 text-xs"
+                >
+                  <X className="h-3 w-3" />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Grid de Filtros */}
