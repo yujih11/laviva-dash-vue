@@ -288,7 +288,7 @@ export function TabelaPrevisaoProdutos({
 
   const handleSalvarCrescimento = async (codigo: string) => {
     const novoValor = parseFloat(editandoValor);
-    if (isNaN(novoValor)) {
+    if (isNaN(novoValor) && editandoValor.trim() !== "") {
       toast.error("Valor inválido", {
         description: "Digite um número válido para o percentual de crescimento.",
       });
@@ -299,14 +299,27 @@ export function TabelaPrevisaoProdutos({
       const ano = anoSelecionado ? parseInt(anoSelecionado) : null;
       const mes = mesSelecionado;
 
-      // Se novoValor for 0 ou null/empty, deletar o registro específico
-      if (novoValor === 0 || editandoValor.trim() === "") {
-        const { error } = await supabase
+      // Se novoValor for 0 ou vazio, deletar o registro específico
+      if (novoValor === 0 || editandoValor.trim() === "" || isNaN(novoValor)) {
+        // Construir query de delete com null-safe comparison
+        let deleteQuery = supabase
           .from("crescimento_produtos")
           .delete()
-          .eq("codigo_produto", codigo)
-          .eq("ano", ano)
-          .eq("mes", mes);
+          .eq("codigo_produto", codigo);
+        
+        if (ano === null) {
+          deleteQuery = deleteQuery.is("ano", null);
+        } else {
+          deleteQuery = deleteQuery.eq("ano", ano);
+        }
+        
+        if (mes === null) {
+          deleteQuery = deleteQuery.is("mes", null);
+        } else {
+          deleteQuery = deleteQuery.eq("mes", mes);
+        }
+
+        const { error } = await deleteQuery;
 
         if (error) throw error;
 
@@ -323,8 +336,7 @@ export function TabelaPrevisaoProdutos({
               percentual_crescimento: novoValor,
               ano: ano,
               mes: mes,
-            },
-            { onConflict: "codigo_produto,ano,mes" }
+            }
           );
 
         if (error) throw error;
