@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, TrendingUp, Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, TrendingUp, Package, Calendar } from "lucide-react";
 import { cleanProductName } from "@/lib/product-utils";
 import { 
   LineChart, 
@@ -41,6 +42,8 @@ export default function ProdutoDetalhes() {
   const [previsoes, setPrevisoes] = useState<PrevisaoData[]>([]);
   const [vendasReais, setVendasReais] = useState<VendasData[]>([]);
   const [estoque, setEstoque] = useState(0);
+  const [anoSelecionado, setAnoSelecionado] = useState<number>(2025);
+  const [mesSelecionado, setMesSelecionado] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,35 +102,46 @@ export default function ProdutoDetalhes() {
   const dadosGraficoLinha = mesNomes.map((mesNome, idx) => {
     const mesNum = idx + 1;
     
-    const previsao2025 = previsoes.find(p => {
+    // Filtrar por mês se selecionado
+    if (mesSelecionado !== null && mesNum !== mesSelecionado) {
+      return null;
+    }
+    
+    const previsao = previsoes.find(p => {
       const mesStr = String(p.mes).toLowerCase();
       const pMes = mesMap[mesStr] || parseInt(String(p.mes));
       const pAno = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-      return pMes === mesNum && pAno === 2025;
+      return pMes === mesNum && pAno === anoSelecionado;
     });
 
-    const vendas2025 = vendasReais.find(v => v.mes === mesNum && v.ano === 2025);
+    const vendas = vendasReais.find(v => v.mes === mesNum && v.ano === anoSelecionado);
 
     return {
       mes: mesNome,
-      previsao: previsao2025?.total_previsto || 0,
-      realizado: vendas2025?.total_vendido || 0,
+      previsao: previsao?.total_previsto || 0,
+      realizado: vendas?.total_vendido || 0,
     };
-  });
+  }).filter(Boolean);
 
   // Preparar dados para o gráfico de barras (vendas por cliente)
   const clientesMap: Record<string, number> = {};
   
-  vendasReais.forEach(venda => {
-    if (venda.vendas_por_cliente && typeof venda.vendas_por_cliente === 'object') {
-      Object.entries(venda.vendas_por_cliente).forEach(([cliente, quantidade]) => {
-        if (!clientesMap[cliente]) {
-          clientesMap[cliente] = 0;
-        }
-        clientesMap[cliente] += Number(quantidade);
-      });
-    }
-  });
+  vendasReais
+    .filter(venda => {
+      if (mesSelecionado !== null && venda.mes !== mesSelecionado) return false;
+      if (venda.ano !== anoSelecionado) return false;
+      return true;
+    })
+    .forEach(venda => {
+      if (venda.vendas_por_cliente && typeof venda.vendas_por_cliente === 'object') {
+        Object.entries(venda.vendas_por_cliente).forEach(([cliente, quantidade]) => {
+          if (!clientesMap[cliente]) {
+            clientesMap[cliente] = 0;
+          }
+          clientesMap[cliente] += Number(quantidade);
+        });
+      }
+    });
 
   const dadosGraficoBarras = Object.entries(clientesMap)
     .map(([cliente, quantidade]) => ({
@@ -155,13 +169,51 @@ export default function ProdutoDetalhes() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="outline" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{produtoNome}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Código: {codigoProduto}</p>
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{produtoNome}</h1>
+              <p className="text-sm text-muted-foreground mt-1">Código: {codigoProduto}</p>
+            </div>
+          </div>
+          
+          {/* Filtros */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select value={String(anoSelecionado)} onValueChange={(v) => setAnoSelecionado(parseInt(v))}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Select value={mesSelecionado === null ? "todos" : String(mesSelecionado)} onValueChange={(v) => setMesSelecionado(v === "todos" ? null : parseInt(v))}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Todos os meses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os meses</SelectItem>
+                <SelectItem value="1">Janeiro</SelectItem>
+                <SelectItem value="2">Fevereiro</SelectItem>
+                <SelectItem value="3">Março</SelectItem>
+                <SelectItem value="4">Abril</SelectItem>
+                <SelectItem value="5">Maio</SelectItem>
+                <SelectItem value="6">Junho</SelectItem>
+                <SelectItem value="7">Julho</SelectItem>
+                <SelectItem value="8">Agosto</SelectItem>
+                <SelectItem value="9">Setembro</SelectItem>
+                <SelectItem value="10">Outubro</SelectItem>
+                <SelectItem value="11">Novembro</SelectItem>
+                <SelectItem value="12">Dezembro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -185,7 +237,7 @@ export default function ProdutoDetalhes() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Previsão Total 2025
+                Previsão Total {anoSelecionado}
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -194,30 +246,40 @@ export default function ProdutoDetalhes() {
                 {previsoes
                   .filter(p => {
                     const pAno = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-                    return pAno === 2025;
+                    const mesStr = String(p.mes).toLowerCase();
+                    const pMes = mesMap[mesStr] || parseInt(String(p.mes));
+                    if (mesSelecionado !== null && pMes !== mesSelecionado) return false;
+                    return pAno === anoSelecionado;
                   })
                   .reduce((acc, p) => acc + (p.total_previsto || 0), 0)
                   .toLocaleString("pt-BR")}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">unidades previstas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mesSelecionado ? `unidades previstas no mês ${mesSelecionado}` : "unidades previstas no ano"}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Vendas Total 2025
+                Vendas Total {anoSelecionado}
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
                 {vendasReais
-                  .filter(v => v.ano === 2025)
+                  .filter(v => {
+                    if (mesSelecionado !== null && v.mes !== mesSelecionado) return false;
+                    return v.ano === anoSelecionado;
+                  })
                   .reduce((acc, v) => acc + (v.total_vendido || 0), 0)
                   .toLocaleString("pt-BR")}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">unidades vendidas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mesSelecionado ? `unidades vendidas no mês ${mesSelecionado}` : "unidades vendidas no ano"}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -227,8 +289,13 @@ export default function ProdutoDetalhes() {
           {/* Gráfico de Linha: Previsão vs Realizado */}
           <Card>
             <CardHeader>
-              <CardTitle>Previsão vs Realizado 2025</CardTitle>
-              <CardDescription>Comparação mensal entre valores previstos e realizados</CardDescription>
+              <CardTitle>Previsão vs Realizado {anoSelecionado}</CardTitle>
+              <CardDescription>
+                {mesSelecionado 
+                  ? `Comparação para o mês ${mesSelecionado}/${anoSelecionado}`
+                  : `Comparação mensal entre valores previstos e realizados em ${anoSelecionado}`
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -269,7 +336,12 @@ export default function ProdutoDetalhes() {
           <Card>
             <CardHeader>
               <CardTitle>Top 10 Clientes</CardTitle>
-              <CardDescription>Volume de vendas por cliente em 2025</CardDescription>
+              <CardDescription>
+                {mesSelecionado 
+                  ? `Volume de vendas por cliente no mês ${mesSelecionado}/${anoSelecionado}`
+                  : `Volume de vendas por cliente em ${anoSelecionado}`
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>

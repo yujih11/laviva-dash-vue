@@ -4,6 +4,7 @@ import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
 import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { cleanProductName } from "@/lib/product-utils";
+import { cn } from "@/lib/utils";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AlertasAgrupados } from "@/components/dashboard/AlertasAgrupados";
 import { EstoqueTable } from "@/components/dashboard/EstoqueTable";
@@ -104,18 +105,6 @@ const Index = () => {
       <FilterBar data={dashboardData} />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Botão de Estoque Total */}
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/estoque-resumido")}
-            className="gap-2"
-          >
-            <Package className="h-4 w-4" />
-            Ver Estoque Total
-          </Button>
-        </div>
-
         {/* Stats Grid */}
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading ? (
@@ -140,15 +129,28 @@ const Index = () => {
                 icon={Package}
                 variant="default"
               />
-              <StatsCard
-                title="Estoque Total"
-                value={totalEstoque.toLocaleString("pt-BR")}
-                description={`${estoqueDisponivel.toLocaleString("pt-BR")} disponível (${percentualEstoqueDisponivel.toFixed(0)}%)`}
-                icon={BarChart3}
-                trend={percentualEstoqueDisponivel > 50 ? "up" : percentualEstoqueDisponivel > 20 ? "neutral" : "down"}
-                trendValue={`${percentualEstoqueDisponivel.toFixed(1)}%`}
-                variant={percentualEstoqueDisponivel > 50 ? "success" : percentualEstoqueDisponivel > 20 ? "warning" : "destructive"}
-              />
+              <Card className={cn("transition-all hover:shadow-lg", percentualEstoqueDisponivel > 50 ? "border-success/50 bg-success/5" : percentualEstoqueDisponivel > 20 ? "border-warning/50 bg-warning/5" : "border-destructive/50 bg-destructive/5")}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Estoque Total</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-2xl font-bold text-foreground">{totalEstoque.toLocaleString("pt-BR")}</div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-xs font-medium", percentualEstoqueDisponivel > 50 ? "text-success" : percentualEstoqueDisponivel > 20 ? "text-muted-foreground" : "text-destructive")}>{percentualEstoqueDisponivel.toFixed(1)}%</span>
+                    <p className="text-xs text-muted-foreground">{`${estoqueDisponivel.toLocaleString("pt-BR")} disponível (${percentualEstoqueDisponivel.toFixed(0)}%)`}</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate("/estoque-resumido")}
+                    className="w-full gap-2"
+                  >
+                    <Package className="h-4 w-4" />
+                    Ver Estoque Total
+                  </Button>
+                </CardContent>
+              </Card>
               <StatsCard
                 title={filters.mes ? `Previsão ${filters.ano || "2025"} - Mês ${filters.mes}` : "Previsão 2025 Total"}
                 value={previsao2025Total.toLocaleString("pt-BR")}
