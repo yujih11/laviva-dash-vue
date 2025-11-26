@@ -416,20 +416,21 @@ export function TabelaPrevisaoProdutos({
                       <div className="flex items-center gap-1 justify-end">
                         <input
                           type="number"
+                          step="0.1"
                           value={editandoValor}
                           onChange={(e) => setEditandoValor(e.target.value)}
-                          className="w-16 px-2 py-1 text-sm border rounded text-right"
+                          className="w-20 px-2 py-1 text-sm border border-border rounded text-right bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleSalvarCrescimento(row.codigo);
                             if (e.key === "Escape") handleCancelarEdicao();
                           }}
                         />
-                        <span className="text-sm">%</span>
+                        <span className="text-sm text-muted-foreground">%</span>
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 text-success hover:text-success"
                           onClick={() => handleSalvarCrescimento(row.codigo)}
                         >
                           ✓
@@ -437,7 +438,7 @@ export function TabelaPrevisaoProdutos({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                           onClick={handleCancelarEdicao}
                         >
                           ✕
@@ -446,7 +447,7 @@ export function TabelaPrevisaoProdutos({
                     ) : (
                       <button
                         onClick={() => handleIniciarEdicao(row.codigo, row.crescimento)}
-                        className="text-sm font-medium hover:underline cursor-pointer"
+                        className="text-sm font-medium hover:text-primary hover:underline cursor-pointer transition-colors"
                       >
                         {row.crescimento}%
                       </button>
