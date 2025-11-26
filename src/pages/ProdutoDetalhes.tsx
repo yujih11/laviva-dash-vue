@@ -181,39 +181,44 @@ export default function ProdutoDetalhes() {
           </div>
           
           {/* Filtros */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-card/50 p-3 rounded-lg border border-border">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Ano:</span>
               <Select value={String(anoSelecionado)} onValueChange={(v) => setAnoSelecionado(parseInt(v))}>
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[120px] bg-background border-border">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50">
                   <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2026">2026</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Select value={mesSelecionado === null ? "todos" : String(mesSelecionado)} onValueChange={(v) => setMesSelecionado(v === "todos" ? null : parseInt(v))}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Todos os meses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os meses</SelectItem>
-                <SelectItem value="1">Janeiro</SelectItem>
-                <SelectItem value="2">Fevereiro</SelectItem>
-                <SelectItem value="3">Março</SelectItem>
-                <SelectItem value="4">Abril</SelectItem>
-                <SelectItem value="5">Maio</SelectItem>
-                <SelectItem value="6">Junho</SelectItem>
-                <SelectItem value="7">Julho</SelectItem>
-                <SelectItem value="8">Agosto</SelectItem>
-                <SelectItem value="9">Setembro</SelectItem>
-                <SelectItem value="10">Outubro</SelectItem>
-                <SelectItem value="11">Novembro</SelectItem>
-                <SelectItem value="12">Dezembro</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="h-6 w-px bg-border"></div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Mês:</span>
+              <Select value={mesSelecionado === null ? "todos" : String(mesSelecionado)} onValueChange={(v) => setMesSelecionado(v === "todos" ? null : parseInt(v))}>
+                <SelectTrigger className="w-[150px] bg-background border-border">
+                  <SelectValue placeholder="Todos os meses" />
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  <SelectItem value="todos">Todos os meses</SelectItem>
+                  <SelectItem value="1">Janeiro</SelectItem>
+                  <SelectItem value="2">Fevereiro</SelectItem>
+                  <SelectItem value="3">Março</SelectItem>
+                  <SelectItem value="4">Abril</SelectItem>
+                  <SelectItem value="5">Maio</SelectItem>
+                  <SelectItem value="6">Junho</SelectItem>
+                  <SelectItem value="7">Julho</SelectItem>
+                  <SelectItem value="8">Agosto</SelectItem>
+                  <SelectItem value="9">Setembro</SelectItem>
+                  <SelectItem value="10">Outubro</SelectItem>
+                  <SelectItem value="11">Novembro</SelectItem>
+                  <SelectItem value="12">Dezembro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
