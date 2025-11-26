@@ -52,19 +52,25 @@ export interface EstoqueResumido {
   estoque_disponivel: number | null;
 }
 
+// Mapeamento de meses em português para números
+const mesMap: Record<string, number> = {
+  'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+  'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+};
+
 // Helper para extrair valor de previsão do mês
 export const extrairPrevisao = (previsoes: PrevisaoResumida[], mes: number, ano: number): number => {
-  const previsao = previsoes.find(
-    (p) => p.mes === String(mes) && p.ano === String(ano)
-  );
+  const previsao = previsoes.find((p) => {
+    const mesNum = typeof p.mes === 'string' ? mesMap[p.mes.toLowerCase()] || parseInt(p.mes) : p.mes;
+    const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+    return mesNum === mes && anoNum === ano;
+  });
   return Number(previsao?.total_previsto ?? 0);
 };
 
 // Helper para extrair vendas reais do mês
 export const extrairVendasReais = (vendas: VendasReais[], mes: number, ano: number): number => {
-  const venda = vendas.find(
-    (v) => v.mes === mes && v.ano === ano
-  );
+  const venda = vendas.find((v) => v.mes === mes && v.ano === ano);
   return Number(venda?.total_vendido ?? 0);
 };
 
@@ -176,20 +182,28 @@ export function useSupabaseDashboardData() {
 
     // Calcular previsões por ano para compatibilidade
     const previsao_2025 = prevs
-      .filter((p) => p.ano === "2025")
+      .filter((p) => {
+        const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+        return anoNum === 2025;
+      })
       .reduce((acc, p) => {
-        const mes = Number(p.mes);
-        if (!isNaN(mes)) {
+        const mesStr = String(p.mes).toLowerCase();
+        const mes = mesMap[mesStr] || parseInt(String(p.mes));
+        if (!isNaN(mes) && mes >= 1 && mes <= 12) {
           acc[mes] = (acc[mes] || 0) + Number(p.total_previsto || 0);
         }
         return acc;
       }, {} as Record<number, number>);
 
     const previsao_2026 = prevs
-      .filter((p) => p.ano === "2026")
+      .filter((p) => {
+        const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+        return anoNum === 2026;
+      })
       .reduce((acc, p) => {
-        const mes = Number(p.mes);
-        if (!isNaN(mes)) {
+        const mesStr = String(p.mes).toLowerCase();
+        const mes = mesMap[mesStr] || parseInt(String(p.mes));
+        if (!isNaN(mes) && mes >= 1 && mes <= 12) {
           acc[mes] = (acc[mes] || 0) + Number(p.total_previsto || 0);
         }
         return acc;
