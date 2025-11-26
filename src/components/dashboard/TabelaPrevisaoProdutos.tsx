@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import {
   Table,
   TableBody,
@@ -54,6 +55,7 @@ export function TabelaPrevisaoProdutos({
 }: TabelaPrevisaoProdutosProps) {
   const [sortField, setSortField] = useState<SortField>("produto");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const { filters } = useDashboardFilters();
 
   // Preparar dados da tabela
   const tableData = useMemo(() => {
@@ -87,9 +89,11 @@ export function TabelaPrevisaoProdutos({
       const isFuture = isMonthInFuture(defaultMes, defaultAno);
       const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
 
-      // 7. Cliente - extrair do jsonb previsao_por_cliente
+      // 7. Cliente - se não houver filtro de cliente, mostrar "Todos"
       let cliente = "";
-      if (item.previsoes.length > 0) {
+      if (filters.clientes.length === 0) {
+        cliente = "Todos";
+      } else if (item.previsoes.length > 0) {
         const mesMap: Record<string, number> = {
           'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
           'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
