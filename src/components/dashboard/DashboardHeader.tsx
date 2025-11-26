@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import lavivaLogo from "@/assets/laviva-logo.png";
 
 interface DashboardHeaderProps {
@@ -8,6 +9,8 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
+  const { signOut, user } = useAuth();
+
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
@@ -29,17 +32,30 @@ export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
             </div>
           </div>
 
-          {/* Botão de Atualizar */}
-          <Button
-            onClick={onRefresh}
-            variant="outline"
-            size="sm"
-            className="gap-2 shrink-0"
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Atualizar</span>
-          </Button>
+          {/* Botões de ação */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={onRefresh}
+              variant="outline"
+              size="sm"
+              className="gap-2 shrink-0"
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Atualizar</span>
+            </Button>
+            {user && (
+              <Button
+                onClick={signOut}
+                variant="ghost"
+                size="sm"
+                className="gap-2 shrink-0"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </header>
