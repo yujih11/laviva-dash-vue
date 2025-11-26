@@ -24,6 +24,8 @@ export interface PrevisaoResumida {
 export interface CrescimentoProduto {
   codigo_produto: string;
   percentual_crescimento: number | null;
+  ano: number | null;
+  mes: number | null;
 }
 
 // Interface principal para o dashboard
@@ -166,7 +168,12 @@ export function useSupabaseDashboardData() {
   codigosProdutos.forEach((codigo) => {
     const vendas = vendasReais?.filter((v) => v.codigo_produto === codigo) || [];
     const prevs = previsoes?.filter((p) => p.codigo_produto === codigo) || [];
-    const crescimento = crescimentos?.find((c) => c.codigo_produto === codigo);
+    
+    // Buscar crescimento baseado no contexto (ano/mês) ou usar padrão global
+    // Prioridade: específico do mês > específico do ano > global > 10%
+    const crescimento = crescimentos?.find((c) => 
+      c.codigo_produto === codigo && c.ano === null && c.mes === null
+    );
     
     // Pegar nome do produto (de vendas ou previsões)
     const produto = vendas[0]?.produto || prevs[0]?.produto || codigo;

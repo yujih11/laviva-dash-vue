@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { calcularAlertas } from "@/lib/alertas-utils";
 import { MiniGraficoComparacao } from "./MiniGraficoComparacao";
@@ -70,6 +71,19 @@ export function TabelaPrevisaoProdutos({
   const [editandoCodigo, setEditandoCodigo] = useState<string | null>(null);
   const [editandoValor, setEditandoValor] = useState<string>("");
   const { filters } = useDashboardFilters();
+  
+  // Buscar todos os crescimentos para usar na lógica
+  const { data: crescimentos } = useQuery({
+    queryKey: ["crescimento_produtos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crescimento_produtos")
+        .select("*");
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Calcular alertas quando os dados mudarem
   useEffect(() => {
@@ -142,8 +156,44 @@ export function TabelaPrevisaoProdutos({
       // 8. Buscar alertas do mapa
       const alertasProduto = alertasMap.get(codigoProduto) || [];
 
-      // 9. Crescimento
-      const crescimento = item.crescimento_percentual || 10;
+      // 9. Crescimento - buscar valor específico por mês/ano ou usar padrão
+      // Prioridade: mês+ano específico > ano específico > global > 10%
+      let crescimento = 10; // padrão
+      
+      if (crescimentos) {
+        // Buscar por mês e ano específicos
+        const crescMesAno = crescimentos.find(c => 
+          c.codigo_produto === codigoProduto && 
+          c.ano === defaultAno && 
+          c.mes === defaultMes
+        );
+        
+        if (crescMesAno) {
+          crescimento = crescMesAno.percentual_crescimento || 10;
+        } else {
+          // Buscar por ano específico (sem mês)
+          const crescAno = crescimentos.find(c => 
+            c.codigo_produto === codigoProduto && 
+            c.ano === defaultAno && 
+            (c.mes === null || c.mes === 0)
+          );
+          
+          if (crescAno) {
+            crescimento = crescAno.percentual_crescimento || 10;
+          } else {
+            // Buscar crescimento global (sem ano nem mês)
+            const crescGlobal = crescimentos.find(c => 
+              c.codigo_produto === codigoProduto && 
+              (c.ano === null || c.ano === 0) && 
+              (c.mes === null || c.mes === 0)
+            );
+            
+            if (crescGlobal) {
+              crescimento = crescGlobal.percentual_crescimento || 10;
+            }
+          }
+        }
+      }
 
       return {
         id: codigoProduto,
@@ -246,21 +296,43 @@ export function TabelaPrevisaoProdutos({
     }
 
     try {
-      const { error } = await supabase
-        .from("crescimento_produtos")
-        .upsert(
-          {
-            codigo_produto: codigo,
-            percentual_crescimento: novoValor,
-          },
-          { onConflict: "codigo_produto" }
-        );
+      const ano = anoSelecionado ? parseInt(anoSelecionado) : null;
+      const mes = mesSelecionado;
 
-      if (error) throw error;
+      // Se novoValor for 0 ou null/empty, deletar o registro específico
+      if (novoValor === 0 || editandoValor.trim() === "") {
+        const { error } = await supabase
+          .from("crescimento_produtos")
+          .delete()
+          .eq("codigo_produto", codigo)
+          .eq("ano", ano)
+          .eq("mes", mes);
 
-      toast.success("Crescimento atualizado", {
-        description: "O percentual foi salvo com sucesso.",
-      });
+        if (error) throw error;
+
+        toast.success("Crescimento removido", {
+          description: "O crescimento customizado foi removido. Será usado o padrão (10%).",
+        });
+      } else {
+        // Upsert com ano e mês para permitir configuração por período
+        const { error } = await supabase
+          .from("crescimento_produtos")
+          .upsert(
+            {
+              codigo_produto: codigo,
+              percentual_crescimento: novoValor,
+              ano: ano,
+              mes: mes,
+            },
+            { onConflict: "codigo_produto,ano,mes" }
+          );
+
+        if (error) throw error;
+
+        toast.success("Crescimento atualizado", {
+          description: `Percentual salvo para ${mes ? `mês ${mes}` : "todos os meses"} de ${ano || "todos os anos"}.`,
+        });
+      }
 
       setEditandoCodigo(null);
       window.location.reload();
@@ -411,7 +483,7 @@ export function TabelaPrevisaoProdutos({
                     {row.isPast ? formatNumber(row.realizado) : "—"}
                   </TableCell>
                   <TableCell className="text-right">{formatNumber(row.estoque)}</TableCell>
-                  <TableCell className="text-right">
+                   <TableCell className="text-right">
                     {editandoCodigo === row.codigo ? (
                       <div className="flex items-center gap-1 justify-end">
                         <input
@@ -419,7 +491,8 @@ export function TabelaPrevisaoProdutos({
                           step="0.1"
                           value={editandoValor}
                           onChange={(e) => setEditandoValor(e.target.value)}
-                          className="w-20 px-2 py-1 text-sm border border-border rounded text-right bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          placeholder="0 = remover"
+                          className="w-24 px-2 py-1 text-sm border border-border rounded text-right bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleSalvarCrescimento(row.codigo);
@@ -445,12 +518,17 @@ export function TabelaPrevisaoProdutos({
                         </Button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleIniciarEdicao(row.codigo, row.crescimento)}
-                        className="text-sm font-medium hover:text-primary hover:underline cursor-pointer transition-colors"
-                      >
-                        {row.crescimento}%
-                      </button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => handleIniciarEdicao(row.codigo, row.crescimento)}
+                          className="text-sm font-medium hover:text-primary hover:underline cursor-pointer transition-colors"
+                        >
+                          {row.crescimento}%
+                        </button>
+                        <span className="text-xs text-muted-foreground">
+                          {mesSelecionado ? `(mês ${mesSelecionado})` : "(todos)"}
+                        </span>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
