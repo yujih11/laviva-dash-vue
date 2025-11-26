@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { DashboardData } from "@/hooks/useSupabaseDashboardData";
 import { cleanProductName } from "@/lib/product-utils";
@@ -48,6 +49,7 @@ const meses = [
 ];
 
 export function FilterBar({ data }: FilterBarProps) {
+  const navigate = useNavigate();
   const { filters, setFilters, resetFilters } = useDashboardFilters();
 
   // Extrair listas únicas de produtos (por codigo_produto)
@@ -212,6 +214,20 @@ export function FilterBar({ data }: FilterBarProps) {
               </Select>
             </div>
           </div>
+
+          {/* Botão Ver Detalhes quando um produto está selecionado */}
+          {filters.produtos.length === 1 && (
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={() => navigate(`/produto-detalhes/${filters.produtos[0]}`)}
+                variant="default"
+                className="gap-2"
+              >
+                <Package className="h-4 w-4" />
+                Ver Detalhes do Produto
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
