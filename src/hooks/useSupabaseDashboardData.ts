@@ -160,10 +160,11 @@ export function useSupabaseDashboardData() {
   // Combinar dados em estrutura consolidada
   const dashboardData: DashboardData[] = [];
   
-  // Agrupar por código de produto
+  // Agrupar por código de produto - incluir também produtos do estoque
   const codigosProdutos = new Set<string>();
   vendasReais?.forEach((v) => v.codigo_produto && codigosProdutos.add(v.codigo_produto));
   previsoes?.forEach((p) => p.codigo_produto && codigosProdutos.add(p.codigo_produto));
+  estoqueAtual?.forEach((e) => e.codigo_produto && codigosProdutos.add(e.codigo_produto));
 
   codigosProdutos.forEach((codigo) => {
     const vendas = vendasReais?.filter((v) => v.codigo_produto === codigo) || [];
@@ -175,8 +176,9 @@ export function useSupabaseDashboardData() {
       c.codigo_produto === codigo && c.ano === null && c.mes === null
     );
     
-    // Pegar nome do produto (de vendas ou previsões)
-    const produto = vendas[0]?.produto || prevs[0]?.produto || codigo;
+    // Pegar nome do produto (de vendas, previsões ou estoque)
+    const estoqueItem = estoqueAtual?.find((e) => e.codigo_produto === codigo);
+    const produto = vendas[0]?.produto || prevs[0]?.produto || estoqueItem?.produto || codigo;
 
     // Extrair clientes únicos das previsões
     const clientesSet = new Set<string>();
