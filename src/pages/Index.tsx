@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSupabaseDashboardData } from "@/hooks/useSupabaseDashboardData";
 import { useFilteredDashboardData } from "@/hooks/useFilteredDashboardData";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
@@ -28,6 +29,7 @@ import {
 import { toast } from "sonner";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { dashboardData, estoqueAtual, loading, error, refetch, loadEstoqueResumido } = useSupabaseDashboardData();
   const { filteredDashboard, filteredEstoque } = useFilteredDashboardData(dashboardData, estoqueAtual);
   const [isEstoqueTotalModalOpen, setIsEstoqueTotalModalOpen] = useState(false);
@@ -233,7 +235,7 @@ const Index = () => {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => setIsEstoqueTotalModalOpen(true)}
+                  onClick={() => navigate("/estoque-resumido")}
                   className="gap-2"
                 >
                   <Package className="h-4 w-4" />

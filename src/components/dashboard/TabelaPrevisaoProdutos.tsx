@@ -1,5 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useDashboardFilters } from "@/contexts/DashboardFilterContext";
+import { calcularAlertas } from "@/lib/alertas-utils";
+import { MiniGraficoComparacao } from "./MiniGraficoComparacao";
+import { EditarCrescimentoDialog } from "./EditarCrescimentoDialog";
 import {
   Table,
   TableBody,
@@ -16,6 +19,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   DashboardData, 
   EstoqueAtual, 
@@ -33,7 +42,7 @@ import {
 } from "@/lib/date-utils";
 import { formatNumber, formatPercentage, getVariationColor } from "@/lib/format-utils";
 import { exportToExcel, formatPrevisaoDataForExport } from "@/lib/excel-export";
-import { ArrowUpDown, TrendingUp, TrendingDown, AlertTriangle, Info, Download } from "lucide-react";
+import { ArrowUpDown, TrendingUp, TrendingDown, AlertTriangle, Info, Download, MoreVertical, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -55,7 +64,26 @@ export function TabelaPrevisaoProdutos({
 }: TabelaPrevisaoProdutosProps) {
   const [sortField, setSortField] = useState<SortField>("produto");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [alertasMap, setAlertasMap] = useState<Map<string, string[]>>(new Map());
+  const [editandoCrescimento, setEditandoCrescimento] = useState<{
+    codigo: string;
+    nome: string;
+    crescimento: number | null;
+  } | null>(null);
   const { filters } = useDashboardFilters();
+
+  // Calcular alertas quando os dados mudarem
+  useEffect(() => {
+    const calcular = async () => {
+      const alertas = await calcularAlertas(
+        data,
+        mesSelecionado,
+        anoSelecionado ? parseInt(anoSelecionado) : null
+      );
+      setAlertasMap(alertas);
+    };
+    calcular();
+  }, [data, mesSelecionado, anoSelecionado]);
 
   // Preparar dados da tabela
   const tableData = useMemo(() => {
@@ -112,6 +140,12 @@ export function TabelaPrevisaoProdutos({
         }
       }
 
+      // 8. Buscar alertas do mapa
+      const alertasProduto = alertasMap.get(codigoProduto) || [];
+
+      // 9. Crescimento
+      const crescimento = item.crescimento_percentual || 10;
+
       return {
         id: codigoProduto,
         produto: produtoLimpo,
@@ -121,7 +155,8 @@ export function TabelaPrevisaoProdutos({
         realizado: isPast ? realizadoValor : null,
         estoque: estoqueValor,
         variacao: variacaoTrimestral,
-        alertas: [] as string[], // Alertas podem ser calculados posteriormente
+        alertas: alertasProduto,
+        crescimento,
         isPast,
         isFuture,
         isOperational,
@@ -161,7 +196,7 @@ export function TabelaPrevisaoProdutos({
   // Retornar todos os dados ordenados (não filtrar por valores zero)
   const filteredData = useMemo(() => {
     return sortedData;
-  }, [sortedData]);
+  }, [sortedData, alertasMap]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -198,6 +233,7 @@ export function TabelaPrevisaoProdutos({
   };
 
   return (
+    <>
     <div className="space-y-4">
       {/* Botão de Exportar */}
       <div className="flex justify-end">
@@ -263,6 +299,7 @@ export function TabelaPrevisaoProdutos({
                   <ArrowUpDown className="h-3 w-3" />
                 </button>
               </TableHead>
+              <TableHead className="text-right">Crescimento</TableHead>
               <TableHead className="text-right">
                 <TooltipProvider>
                   <Tooltip>
@@ -279,12 +316,13 @@ export function TabelaPrevisaoProdutos({
                 </TooltipProvider>
               </TableHead>
               <TableHead>Alerta</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   Nenhum produto encontrado com os filtros selecionados
                 </TableCell>
               </TableRow>
@@ -315,37 +353,13 @@ export function TabelaPrevisaoProdutos({
                   </TableCell>
                   <TableCell className="text-right">{formatNumber(row.estoque)}</TableCell>
                   <TableCell className="text-right">
-                    {row.variacao !== 0 ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "flex items-center gap-1 justify-end cursor-help font-semibold",
-                                getVariationColor(row.variacao).text
-                              )}
-                            >
-                              {row.variacao > 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3" />
-                              )}
-                              {formatPercentage(row.variacao)}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-popover max-w-xs">
-                            <p className="text-sm">
-                              Variação entre a previsão e o realizado deste trimestre.
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Baseado no histórico disponível
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      "—"
-                    )}
+                    <span className="text-sm font-medium">{row.crescimento}%</span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <MiniGraficoComparacao
+                      previsao={row.previsao}
+                      realizado={row.realizado}
+                    />
                   </TableCell>
                   <TableCell>
                     {row.alertas && Array.isArray(row.alertas) && row.alertas.length > 0 ? (
@@ -377,6 +391,29 @@ export function TabelaPrevisaoProdutos({
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setEditandoCrescimento({
+                              codigo: row.codigo,
+                              nome: row.produto,
+                              crescimento: row.crescimento,
+                            })
+                          }
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar Crescimento
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -385,5 +422,21 @@ export function TabelaPrevisaoProdutos({
       </div>
     </div>
     </div>
+
+      {/* Dialog para editar crescimento */}
+      {editandoCrescimento && (
+        <EditarCrescimentoDialog
+          open={!!editandoCrescimento}
+          onOpenChange={(open) => !open && setEditandoCrescimento(null)}
+          codigoProduto={editandoCrescimento.codigo}
+          produtoNome={editandoCrescimento.nome}
+          crescimentoAtual={editandoCrescimento.crescimento}
+          onSuccess={() => {
+            // Recarregar dados (você pode passar um callback de refetch como prop)
+            window.location.reload();
+          }}
+        />
+      )}
+    </>
   );
 }
