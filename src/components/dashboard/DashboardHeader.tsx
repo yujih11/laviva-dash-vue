@@ -36,9 +36,8 @@ export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
           <div className="flex items-center gap-2">
             <Button
               onClick={onRefresh}
-              variant="outline"
               size="sm"
-              className="gap-2 shrink-0"
+              className="gap-2 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -47,9 +46,9 @@ export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
             {user && (
               <Button
                 onClick={signOut}
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="gap-2 shrink-0"
+                className="gap-2 shrink-0 border-border bg-background/50 hover:bg-accent hover:text-accent-foreground"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sair</span>
