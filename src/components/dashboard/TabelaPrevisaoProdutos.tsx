@@ -109,8 +109,8 @@ export function TabelaPrevisaoProdutos({
       const produtoLimpo = cleanProductName(item.produto);
       const codigoProduto = item.codigo_produto;
 
-      // 2. Previsão do mês selecionado
-      const previsaoValor = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
+      // 2. Previsão base do mês selecionado (calculada originalmente com 10%)
+      const previsaoBase = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
 
       // 3. Vendas reais do mês
       const realizadoValor = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno);
@@ -118,43 +118,6 @@ export function TabelaPrevisaoProdutos({
       // 4. Estoque Atual
       const estoqueItem = estoqueAtual.find((e) => e.codigo_produto === codigoProduto);
       const estoqueValor = estoqueItem?.quantidade_disponivel || 0;
-
-      // 5. Variação entre previsão e realizado (simplificado)
-      let variacaoTrimestral = 0;
-      if (realizadoValor > 0 && previsaoValor > 0) {
-        variacaoTrimestral = ((realizadoValor - previsaoValor) / previsaoValor) * 100;
-      }
-
-      // 6. Regras de destaque
-      const isPast = isMonthInPast(defaultMes, defaultAno);
-      const isFuture = isMonthInFuture(defaultMes, defaultAno);
-      const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
-
-      // 7. Cliente - se não houver filtro de cliente, mostrar "Todos"
-      let cliente = "";
-      if (filters.clientes.length === 0) {
-        cliente = "Todos";
-      } else if (item.previsoes.length > 0) {
-        const mesMap: Record<string, number> = {
-          'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
-          'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
-        };
-        
-        const previsao = item.previsoes.find((p) => {
-          const mesStr = String(p.mes).toLowerCase();
-          const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
-          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-          return mesNum === defaultMes && anoNum === defaultAno;
-        });
-        
-        if (previsao?.previsao_por_cliente) {
-          const clientes = Object.keys(previsao.previsao_por_cliente);
-          cliente = clientes.length > 0 ? clientes.join(", ") : "";
-        }
-      }
-
-      // 8. Buscar alertas do mapa
-      const alertasProduto = alertasMap.get(codigoProduto) || [];
 
       // 9. Crescimento - buscar valor específico por mês/ano ou usar padrão
       // Prioridade: mês+ano específico > ano específico > global > 10%
@@ -194,6 +157,52 @@ export function TabelaPrevisaoProdutos({
           }
         }
       }
+
+      // Recalcular previsão com base no crescimento customizado
+      // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
+      // Nova previsão = base * (1 + crescimento/100)
+      let previsaoValor = previsaoBase;
+      if (previsaoBase > 0 && crescimento !== 10) {
+        const vendaBase = previsaoBase / 1.10; // Desfaz o 10% original
+        previsaoValor = vendaBase * (1 + crescimento / 100);
+      }
+
+      // 5. Variação entre previsão e realizado (simplificado)
+      let variacaoTrimestral = 0;
+      if (realizadoValor > 0 && previsaoValor > 0) {
+        variacaoTrimestral = ((realizadoValor - previsaoValor) / previsaoValor) * 100;
+      }
+
+      // 6. Regras de destaque
+      const isPast = isMonthInPast(defaultMes, defaultAno);
+      const isFuture = isMonthInFuture(defaultMes, defaultAno);
+      const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
+
+      // 7. Cliente - se não houver filtro de cliente, mostrar "Todos"
+      let cliente = "";
+      if (filters.clientes.length === 0) {
+        cliente = "Todos";
+      } else if (item.previsoes.length > 0) {
+        const mesMap: Record<string, number> = {
+          'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+          'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+        };
+        
+        const previsao = item.previsoes.find((p) => {
+          const mesStr = String(p.mes).toLowerCase();
+          const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
+          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+          return mesNum === defaultMes && anoNum === defaultAno;
+        });
+        
+        if (previsao?.previsao_por_cliente) {
+          const clientes = Object.keys(previsao.previsao_por_cliente);
+          cliente = clientes.length > 0 ? clientes.join(", ") : "";
+        }
+      }
+
+      // 8. Buscar alertas do mapa
+      const alertasProduto = alertasMap.get(codigoProduto) || [];
 
       return {
         id: codigoProduto,
