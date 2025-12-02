@@ -179,26 +179,13 @@ export function TabelaPrevisaoProdutos({
       const isOperational = isWithinTwoMonths(defaultMes, defaultAno);
 
       // 7. Cliente - se não houver filtro de cliente, mostrar "Todos"
+      // Se houver filtro, mostrar apenas o(s) cliente(s) selecionado(s)
       let cliente = "";
       if (filters.clientes.length === 0) {
         cliente = "Todos";
-      } else if (item.previsoes.length > 0) {
-        const mesMap: Record<string, number> = {
-          'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
-          'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
-        };
-        
-        const previsao = item.previsoes.find((p) => {
-          const mesStr = String(p.mes).toLowerCase();
-          const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
-          const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-          return mesNum === defaultMes && anoNum === defaultAno;
-        });
-        
-        if (previsao?.previsao_por_cliente) {
-          const clientes = Object.keys(previsao.previsao_por_cliente);
-          cliente = clientes.length > 0 ? clientes.join(", ") : "";
-        }
+      } else {
+        // Mostrar apenas o(s) cliente(s) selecionado(s) no filtro
+        cliente = filters.clientes.join(", ");
       }
 
       // 8. Buscar alertas do mapa
