@@ -98,6 +98,20 @@ export function TabelaPrevisaoProdutos({
     calcular();
   }, [data, mesSelecionado, anoSelecionado]);
 
+  // Agregar estoque por código de produto (normalizado)
+  const estoqueAgregado = useMemo(() => {
+    const agregado = new Map<string, number>();
+    
+    estoqueAtual.forEach((item) => {
+      // Normalizar código removendo zeros à esquerda
+      const codigoNormalizado = item.codigo_produto.replace(/^0+/, '');
+      const quantidadeAtual = agregado.get(codigoNormalizado) || 0;
+      agregado.set(codigoNormalizado, quantidadeAtual + (item.quantidade_disponivel || 0));
+    });
+    
+    return agregado;
+  }, [estoqueAtual]);
+
   // Preparar dados da tabela
   const tableData = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -108,6 +122,7 @@ export function TabelaPrevisaoProdutos({
       // 1. Nome do produto limpo
       const produtoLimpo = cleanProductName(item.produto);
       const codigoProduto = item.codigo_produto;
+      const codigoNormalizado = codigoProduto.replace(/^0+/, '');
 
       // 2. Previsão base do mês selecionado (calculada originalmente com 10%)
       let previsaoBase = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
@@ -115,10 +130,25 @@ export function TabelaPrevisaoProdutos({
       // 3. Vendas reais do mês atual e do ano anterior (para fallback)
       const realizadoValor = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno);
       const vendasAnoAnterior = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno - 1);
+      
+      // Buscar vendas dos últimos 3 meses do ano atual para calcular média
+      const vendasRecentes: number[] = [];
+      for (let i = 1; i <= 3; i++) {
+        let mesAnterior = defaultMes - i;
+        let anoAnterior = defaultAno;
+        if (mesAnterior <= 0) {
+          mesAnterior += 12;
+          anoAnterior -= 1;
+        }
+        const vendaMes = extrairVendasReais(item.vendas_reais, mesAnterior, anoAnterior);
+        if (vendaMes > 0) vendasRecentes.push(vendaMes);
+      }
+      const mediaVendasRecentes = vendasRecentes.length > 0 
+        ? vendasRecentes.reduce((a, b) => a + b, 0) / vendasRecentes.length 
+        : 0;
 
-      // 4. Estoque Atual
-      const estoqueItem = estoqueAtual.find((e) => e.codigo_produto === codigoProduto);
-      const estoqueValor = estoqueItem?.quantidade_disponivel || 0;
+      // 4. Estoque Atual - usar agregado por código normalizado
+      const estoqueValor = estoqueAgregado.get(codigoNormalizado) || estoqueAgregado.get(codigoProduto) || 0;
 
       // 9. Crescimento - buscar valor específico por cliente/mês/ano ou usar padrão
       // Prioridade: cliente+mês+ano > mês+ano > ano > global > 10%
@@ -181,15 +211,32 @@ export function TabelaPrevisaoProdutos({
       // Recalcular previsão com base no crescimento customizado
       // Se previsaoBase for 0 e houver vendas do ano anterior, calcular automaticamente
       let previsaoValor = previsaoBase;
+      let previsaoOrigem: 'banco' | 'ano_anterior' | 'media_recente' | 'sem_dados' = 'banco';
+      let previsaoExplicacao = '';
       
-      // Fallback: se previsão for 0 e houver vendas no ano anterior, calcular automaticamente
-      if (previsaoBase === 0 && vendasAnoAnterior > 0) {
-        previsaoValor = Math.round(vendasAnoAnterior * (1 + crescimento / 100));
+      // Fallback: se previsão for 0, tentar calcular
+      if (previsaoBase === 0) {
+        if (vendasAnoAnterior > 0) {
+          // Usar vendas do ano anterior
+          previsaoValor = Math.round(vendasAnoAnterior * (1 + crescimento / 100));
+          previsaoOrigem = 'ano_anterior';
+          previsaoExplicacao = `Calculado: ${formatNumber(vendasAnoAnterior)} vendas em ${defaultAno - 1} × ${crescimento}% crescimento`;
+        } else if (mediaVendasRecentes > 0) {
+          // Usar média dos últimos 3 meses
+          previsaoValor = Math.round(mediaVendasRecentes * (1 + crescimento / 100));
+          previsaoOrigem = 'media_recente';
+          previsaoExplicacao = `Calculado: média de ${formatNumber(Math.round(mediaVendasRecentes))} (últimos ${vendasRecentes.length} meses) × ${crescimento}% crescimento`;
+        } else {
+          // Sem dados para calcular
+          previsaoOrigem = 'sem_dados';
+          previsaoExplicacao = `Sem histórico de vendas em ${defaultAno - 1} e sem vendas recentes para calcular previsão`;
+        }
       } else if (previsaoBase > 0 && crescimento !== 10) {
         // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
         // Nova previsão = base * (1 + crescimento/100)
         const vendaBase = previsaoBase / 1.10; // Desfaz o 10% original
         previsaoValor = vendaBase * (1 + crescimento / 100);
+        previsaoExplicacao = `Previsão ajustada com ${crescimento}% de crescimento`;
       }
 
       // 5. Variação entre previsão e realizado (simplificado)
@@ -222,6 +269,8 @@ export function TabelaPrevisaoProdutos({
         codigo: codigoProduto,
         cliente,
         previsao: previsaoValor,
+        previsaoOrigem,
+        previsaoExplicacao,
         realizado: isPast ? realizadoValor : null,
         estoque: estoqueValor,
         variacao: variacaoTrimestral,
@@ -232,7 +281,7 @@ export function TabelaPrevisaoProdutos({
         isOperational,
       };
     });
-  }, [data, estoqueAtual, mesSelecionado, anoSelecionado]);
+  }, [data, estoqueAgregado, mesSelecionado, anoSelecionado, alertasMap, filters.clientes, crescimentos]);
 
   // Ordenação
   const sortedData = useMemo(() => {
@@ -517,15 +566,35 @@ export function TabelaPrevisaoProdutos({
                   <TableCell
                     className={cn(
                       "text-right font-semibold",
-                      row.isOperational && "text-primary font-bold"
+                      row.isOperational && "text-primary font-bold",
+                      row.previsaoOrigem === 'sem_dados' && "text-muted-foreground"
                     )}
                   >
-                    {formatNumber(row.previsao)}
+                    <div className="flex items-center justify-end gap-1">
+                      {row.previsaoOrigem !== 'banco' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className={cn(
+                                "h-3 w-3 cursor-help",
+                                row.previsaoOrigem === 'sem_dados' ? "text-warning" : "text-muted-foreground"
+                              )} />
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-popover max-w-[300px]">
+                              <p className="text-sm">{row.previsaoExplicacao}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <span>{row.previsao > 0 ? formatNumber(row.previsao) : "—"}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {row.isPast ? formatNumber(row.realizado) : "—"}
                   </TableCell>
-                  <TableCell className="text-right">{formatNumber(row.estoque)}</TableCell>
+                  <TableCell className="text-right">
+                    {row.estoque > 0 ? formatNumber(row.estoque) : "—"}
+                  </TableCell>
                    <TableCell className="text-right">
                     {editandoCodigo === row.codigo ? (
                       <div className="flex items-center gap-1 justify-end">
