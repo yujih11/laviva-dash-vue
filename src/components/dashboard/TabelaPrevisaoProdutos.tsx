@@ -110,10 +110,11 @@ export function TabelaPrevisaoProdutos({
       const codigoProduto = item.codigo_produto;
 
       // 2. Previsão base do mês selecionado (calculada originalmente com 10%)
-      const previsaoBase = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
+      let previsaoBase = extrairPrevisao(item.previsoes, defaultMes, defaultAno);
 
-      // 3. Vendas reais do mês
+      // 3. Vendas reais do mês atual e do ano anterior (para fallback)
       const realizadoValor = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno);
+      const vendasAnoAnterior = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno - 1);
 
       // 4. Estoque Atual
       const estoqueItem = estoqueAtual.find((e) => e.codigo_produto === codigoProduto);
@@ -178,10 +179,15 @@ export function TabelaPrevisaoProdutos({
       }
 
       // Recalcular previsão com base no crescimento customizado
-      // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
-      // Nova previsão = base * (1 + crescimento/100)
+      // Se previsaoBase for 0 e houver vendas do ano anterior, calcular automaticamente
       let previsaoValor = previsaoBase;
-      if (previsaoBase > 0 && crescimento !== 10) {
+      
+      // Fallback: se previsão for 0 e houver vendas no ano anterior, calcular automaticamente
+      if (previsaoBase === 0 && vendasAnoAnterior > 0) {
+        previsaoValor = Math.round(vendasAnoAnterior * (1 + crescimento / 100));
+      } else if (previsaoBase > 0 && crescimento !== 10) {
+        // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
+        // Nova previsão = base * (1 + crescimento/100)
         const vendaBase = previsaoBase / 1.10; // Desfaz o 10% original
         previsaoValor = vendaBase * (1 + crescimento / 100);
       }

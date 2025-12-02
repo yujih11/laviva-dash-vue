@@ -72,13 +72,24 @@ export async function calcularAlertas(
         return mesNum === mesSelecionado && anoNum === anoSelecionado;
       });
 
-      // Buscar venda real do mês
+      // Buscar venda real do mês atual e do ano anterior (para fallback)
       const vendaReal = produto.vendas_reais.find(
         (v) => v.mes === mesSelecionado && v.ano === anoSelecionado
       );
+      const vendaAnoAnterior = produto.vendas_reais.find(
+        (v) => v.mes === mesSelecionado && v.ano === anoSelecionado - 1
+      );
 
-      if (previsao && vendaReal && previsao.total_previsto && vendaReal.total_vendido) {
-        const previsaoValor = Number(previsao.total_previsto);
+      // Calcular previsão com fallback
+      let previsaoValor = Number(previsao?.total_previsto || 0);
+      const crescimentoDefault = (produto.crescimento_percentual ?? 10);
+      
+      // Fallback: se previsão for 0 e houver vendas no ano anterior, calcular automaticamente
+      if (previsaoValor === 0 && vendaAnoAnterior && vendaAnoAnterior.total_vendido && vendaAnoAnterior.total_vendido > 0) {
+        previsaoValor = Math.round(Number(vendaAnoAnterior.total_vendido) * (1 + crescimentoDefault / 100));
+      }
+
+      if (vendaReal && vendaReal.total_vendido) {
         const realizadoValor = Number(vendaReal.total_vendido);
         
         if (previsaoValor > 0) {

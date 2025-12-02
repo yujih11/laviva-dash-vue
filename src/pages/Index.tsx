@@ -61,28 +61,49 @@ const Index = () => {
     'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
     'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
   };
+
+  // Helper para calcular previsão com fallback
+  const calcularPrevisaoComFallback = (
+    item: typeof filteredDashboard[0],
+    mes: number,
+    ano: number
+  ): number => {
+    const previsaoMes = item.previsoes?.find((p) => {
+      const mesStr = String(p.mes).toLowerCase();
+      const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
+      const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+      return mesNum === mes && anoNum === ano;
+    });
+
+    let previsaoValor = Number(previsaoMes?.total_previsto ?? 0);
+
+    // Fallback: se previsão for 0 e houver vendas no ano anterior, calcular automaticamente
+    if (previsaoValor === 0 && item.vendas_reais) {
+      const vendaAnoAnterior = item.vendas_reais.find(
+        (v) => v.mes === mes && v.ano === ano - 1
+      );
+      if (vendaAnoAnterior && vendaAnoAnterior.total_vendido && vendaAnoAnterior.total_vendido > 0) {
+        const crescimento = item.crescimento_percentual ?? 10;
+        previsaoValor = Math.round(Number(vendaAnoAnterior.total_vendido) * (1 + crescimento / 100));
+      }
+    }
+
+    return previsaoValor;
+  };
   
   const previsao2025Total = filteredDashboard.reduce((acc, item) => {
     if (!item.previsoes) return acc;
 
     // Se há mês selecionado, somar apenas esse mês
     if (filters.mes !== null) {
-      const previsaoMes = item.previsoes.find((p) => {
-        const mesStr = String(p.mes).toLowerCase();
-        const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
-        const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-        return mesNum === filters.mes && anoNum === 2025;
-      });
-      return acc + Number(previsaoMes?.total_previsto ?? 0);
+      return acc + calcularPrevisaoComFallback(item, filters.mes, 2025);
     }
 
     // Caso contrário, somar todos os meses de 2025
-    const total2025 = item.previsoes
-      .filter((p) => {
-        const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-        return anoNum === 2025;
-      })
-      .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
+    let total2025 = 0;
+    for (let mes = 1; mes <= 12; mes++) {
+      total2025 += calcularPrevisaoComFallback(item, mes, 2025);
+    }
     
     return acc + total2025;
   }, 0);
@@ -309,9 +330,10 @@ const Index = () => {
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2025</p>
                           <p className="text-2xl font-bold text-foreground">
                             {(() => {
-                              const total = item.previsoes
-                                .filter((p) => p.ano === "2025")
-                                .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
+                              let total = 0;
+                              for (let mes = 1; mes <= 12; mes++) {
+                                total += calcularPrevisaoComFallback(item, mes, 2025);
+                              }
                               return total.toLocaleString("pt-BR");
                             })()}
                           </p>
@@ -320,9 +342,10 @@ const Index = () => {
                           <p className="text-xs text-muted-foreground mb-1">Previsão 2026</p>
                           <p className="text-2xl font-bold text-foreground">
                             {(() => {
-                              const total = item.previsoes
-                                .filter((p) => p.ano === "2026")
-                                .reduce((sum, p) => sum + Number(p.total_previsto ?? 0), 0);
+                              let total = 0;
+                              for (let mes = 1; mes <= 12; mes++) {
+                                total += calcularPrevisaoComFallback(item, mes, 2026);
+                              }
                               return total.toLocaleString("pt-BR");
                             })()}
                           </p>
