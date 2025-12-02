@@ -33,6 +33,7 @@ export interface DashboardData {
   id?: string; // Para compatibilidade
   codigo_produto: string;
   produto: string;
+  marca?: string; // Da tabela de estoque
   cliente?: string; // Extraído dinamicamente dos dados
   vendas_reais: VendasReais[];
   previsoes: PrevisaoResumida[];
@@ -178,6 +179,10 @@ export function useSupabaseDashboardData() {
     // Pegar nome do produto (de vendas ou previsões)
     const produto = vendas[0]?.produto || prevs[0]?.produto || codigo;
 
+    // Buscar marca do estoque
+    const estoqueItem = estoqueAtual?.find((e) => e.codigo_produto === codigo);
+    const marca = estoqueItem?.marca || undefined;
+
     // Extrair clientes únicos das previsões
     const clientesSet = new Set<string>();
     prevs.forEach((p) => {
@@ -220,6 +225,7 @@ export function useSupabaseDashboardData() {
       id: codigo,
       codigo_produto: codigo,
       produto,
+      marca,
       cliente,
       vendas_reais: vendas,
       previsoes: prevs,

@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, X, Filter, Calendar, Package, Users, Eye } from "lucide-react";
+import { Check, X, Filter, Calendar, Package, Users, Eye, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
@@ -76,16 +76,34 @@ export function FilterBar({ data }: FilterBarProps) {
     return Array.from(clientesSet).filter(Boolean).sort();
   }, [data]);
 
+  // Extrair lista única de marcas
+  const marcas = useMemo(() => {
+    const marcasSet = new Set<string>();
+    data.forEach((item) => {
+      // Marca pode vir do estoque ou de outras fontes
+      if ((item as any).marca) {
+        marcasSet.add((item as any).marca);
+      }
+    });
+    // Se não houver marcas nos dados, usar as padrão
+    if (marcasSet.size === 0) {
+      return ["LAVIVA", "JOMARA"];
+    }
+    return Array.from(marcasSet).filter(Boolean).sort();
+  }, [data]);
+
   // Verificar se há filtros ativos
   const hasActiveFilters =
     filters.produtos.length > 0 ||
     filters.clientes.length > 0 ||
+    filters.marcas.length > 0 ||
     filters.ano !== null ||
     filters.mes !== null;
 
   const activeFilterCount =
     filters.produtos.length +
     filters.clientes.length +
+    filters.marcas.length +
     (filters.ano ? 1 : 0) +
     (filters.mes ? 1 : 0);
 
@@ -123,7 +141,7 @@ export function FilterBar({ data }: FilterBarProps) {
           </div>
 
           {/* Grid de Filtros */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Filtro de Produtos */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-foreground font-medium">
@@ -163,6 +181,27 @@ export function FilterBar({ data }: FilterBarProps) {
                   }))
                 }
                 placeholder="Selecione clientes"
+              />
+            </div>
+
+            {/* Filtro de Marca */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-foreground font-medium">
+                <Tag className="h-3.5 w-3.5 opacity-70" />
+                Marca
+              </Label>
+              <MultiSelectFilter
+                options={marcas}
+                selected={filters.marcas}
+                onSelect={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    marcas: prev.marcas.includes(value)
+                      ? prev.marcas.filter((m) => m !== value)
+                      : [...prev.marcas, value],
+                  }))
+                }
+                placeholder="Selecione marcas"
               />
             </div>
 

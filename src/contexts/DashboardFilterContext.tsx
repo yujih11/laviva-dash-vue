@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 export interface DashboardFilters {
   produtos: string[];
   clientes: string[];
+  marcas: string[];
   ano: "2025" | "2026" | null;
   mes: number | null;
 }
@@ -38,6 +39,7 @@ const { ano: anoInicial, mes: mesInicial } = getInitialDateFilters();
 const initialFilters: DashboardFilters = {
   produtos: [],
   clientes: [],
+  marcas: [],
   ano: anoInicial,
   mes: mesInicial,
 };

@@ -27,6 +27,13 @@ export function useFilteredDashboardData(
         }
       }
 
+      // Filtro de marcas
+      if (filters.marcas.length > 0) {
+        if (!item.marca || !filters.marcas.includes(item.marca)) {
+          return false;
+        }
+      }
+
       // Filtro de ano - verifica se há previsões para o ano selecionado
       if (filters.ano && item.previsoes) {
         const hasPrevisoesAno = item.previsoes.some((p) => {
@@ -64,6 +71,13 @@ export function useFilteredDashboardData(
           (filterProduto) => item.codigo_produto === filterProduto
         );
         if (!matchesProduto) return false;
+      }
+
+      // Filtro de marcas
+      if (filters.marcas.length > 0) {
+        if (!item.marca || !filters.marcas.includes(item.marca)) {
+          return false;
+        }
       }
 
       return true;
