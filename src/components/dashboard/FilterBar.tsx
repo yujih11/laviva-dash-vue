@@ -80,14 +80,13 @@ export function FilterBar({ data }: FilterBarProps) {
   const marcas = useMemo(() => {
     const marcasSet = new Set<string>();
     data.forEach((item) => {
-      // Marca pode vir do estoque ou de outras fontes
-      if ((item as any).marca) {
-        marcasSet.add((item as any).marca);
+      if (item.marca) {
+        marcasSet.add(item.marca);
       }
     });
-    // Se não houver marcas nos dados, usar as padrão
+    // Se não houver marcas nos dados, usar as padrão do banco
     if (marcasSet.size === 0) {
-      return ["LAVIVA", "JOMARA"];
+      return ["LAVIVA", "MAMBO", "DESCONHECIDO"];
     }
     return Array.from(marcasSet).filter(Boolean).sort();
   }, [data]);
