@@ -180,8 +180,12 @@ export function useSupabaseDashboardData() {
     // Pegar nome do produto (de vendas ou previsões)
     const produto = vendas[0]?.produto || prevs[0]?.produto || codigo;
 
-    // Buscar marca do estoque
-    const estoqueItem = estoqueAtual?.find((e) => e.codigo_produto === codigo);
+    // Buscar marca do estoque (normalizar código removendo zeros à esquerda)
+    const codigoNormalizado = codigo.replace(/^0+/, '');
+    const estoqueItem = estoqueAtual?.find((e) => {
+      const estoqueCodigoNormalizado = e.codigo_produto.replace(/^0+/, '');
+      return estoqueCodigoNormalizado === codigoNormalizado || e.codigo_produto === codigo;
+    });
     const marca = estoqueItem?.marca || undefined;
 
     // Extrair clientes únicos das previsões
