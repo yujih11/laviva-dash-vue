@@ -42,6 +42,7 @@ export default function ProdutoDetalhes() {
   const [previsoes, setPrevisoes] = useState<PrevisaoData[]>([]);
   const [vendasReais, setVendasReais] = useState<VendasData[]>([]);
   const [estoque, setEstoque] = useState(0);
+  const [crescimentoPercentual, setCrescimentoPercentual] = useState(10); // Default 10%
   const [anoSelecionado, setAnoSelecionado] = useState<number>(2025);
   const [mesSelecionado, setMesSelecionado] = useState<number | null>(null);
 
@@ -68,11 +69,22 @@ export default function ProdutoDetalhes() {
           .from("estoque_resumido")
           .select("*")
           .eq("codigo_produto", codigoProduto)
-          .single();
+          .maybeSingle();
+
+        // Buscar crescimento personalizado
+        const { data: crescimentoData } = await supabase
+          .from("crescimento_produtos")
+          .select("*")
+          .eq("codigo_produto", codigoProduto)
+          .is("ano", null)
+          .is("mes", null)
+          .maybeSingle();
 
         if (previsoesData && previsoesData.length > 0) {
           setProdutoNome(cleanProductName(previsoesData[0].produto || ""));
           setPrevisoes(previsoesData as PrevisaoData[]);
+        } else if (vendasData && vendasData.length > 0) {
+          setProdutoNome(cleanProductName(vendasData[0].produto || ""));
         }
 
         if (vendasData) {
@@ -81,6 +93,10 @@ export default function ProdutoDetalhes() {
 
         if (estoqueData) {
           setEstoque(estoqueData.estoque_disponivel || 0);
+        }
+
+        if (crescimentoData) {
+          setCrescimentoPercentual(crescimentoData.percentual_crescimento ?? 10);
         }
       } catch (error) {
         console.error("Erro ao carregar dados do produto:", error);
@@ -115,10 +131,23 @@ export default function ProdutoDetalhes() {
     });
 
     const vendas = vendasReais.find(v => v.mes === mesNum && v.ano === anoSelecionado);
+    
+    // Calcular previsão: usar valor do banco se existir e > 0
+    // Se for 0 ou não existir para o ano atual, calcular com base no ano anterior + crescimento
+    let previsaoValor = previsao?.total_previsto || 0;
+    
+    if (previsaoValor === 0) {
+      // Buscar vendas do ano anterior no mesmo mês
+      const vendasAnoAnterior = vendasReais.find(v => v.mes === mesNum && v.ano === anoSelecionado - 1);
+      if (vendasAnoAnterior && vendasAnoAnterior.total_vendido > 0) {
+        // Calcular previsão como vendas do ano anterior + crescimento
+        previsaoValor = Math.round(vendasAnoAnterior.total_vendido * (1 + crescimentoPercentual / 100));
+      }
+    }
 
     return {
       mes: mesNome,
-      previsao: previsao?.total_previsto || 0,
+      previsao: previsaoValor,
       realizado: vendas?.total_vendido || 0,
     };
   }).filter(Boolean);
@@ -248,16 +277,26 @@ export default function ProdutoDetalhes() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
-                {previsoes
-                  .filter(p => {
-                    const pAno = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-                    const mesStr = String(p.mes).toLowerCase();
-                    const pMes = mesMap[mesStr] || parseInt(String(p.mes));
-                    if (mesSelecionado !== null && pMes !== mesSelecionado) return false;
-                    return pAno === anoSelecionado;
-                  })
-                  .reduce((acc, p) => acc + (p.total_previsto || 0), 0)
-                  .toLocaleString("pt-BR")}
+                {(() => {
+                  // Calcular total usando mesma lógica do gráfico (com fallback)
+                  const mesesParaCalcular = mesSelecionado !== null ? [mesSelecionado] : [1,2,3,4,5,6,7,8,9,10,11,12];
+                  return mesesParaCalcular.reduce((total, mesNum) => {
+                    const previsao = previsoes.find(p => {
+                      const mesStr = String(p.mes).toLowerCase();
+                      const pMes = mesMap[mesStr] || parseInt(String(p.mes));
+                      const pAno = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
+                      return pMes === mesNum && pAno === anoSelecionado;
+                    });
+                    let previsaoValor = previsao?.total_previsto || 0;
+                    if (previsaoValor === 0) {
+                      const vendasAnoAnterior = vendasReais.find(v => v.mes === mesNum && v.ano === anoSelecionado - 1);
+                      if (vendasAnoAnterior && vendasAnoAnterior.total_vendido > 0) {
+                        previsaoValor = Math.round(vendasAnoAnterior.total_vendido * (1 + crescimentoPercentual / 100));
+                      }
+                    }
+                    return total + previsaoValor;
+                  }, 0).toLocaleString("pt-BR");
+                })()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {mesSelecionado ? `unidades previstas no mês ${mesSelecionado}` : "unidades previstas no ano"}
