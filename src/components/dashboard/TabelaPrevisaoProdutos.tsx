@@ -231,12 +231,18 @@ export function TabelaPrevisaoProdutos({
           previsaoOrigem = 'sem_dados';
           previsaoExplicacao = `Sem histórico de vendas em ${defaultAno - 1} e sem vendas recentes para calcular previsão`;
         }
-      } else if (previsaoBase > 0 && crescimento !== 10) {
-        // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
-        // Nova previsão = base * (1 + crescimento/100)
-        const vendaBase = previsaoBase / 1.10; // Desfaz o 10% original
-        previsaoValor = vendaBase * (1 + crescimento / 100);
-        previsaoExplicacao = `Previsão ajustada com ${crescimento}% de crescimento`;
+      } else if (previsaoBase > 0) {
+        if (crescimento !== 10) {
+          // A previsão original foi calculada com 10%, então: base = previsaoBase / 1.10
+          // Nova previsão = base * (1 + crescimento/100)
+          const vendaBase = previsaoBase / 1.10; // Desfaz o 10% original
+          previsaoValor = vendaBase * (1 + crescimento / 100);
+          previsaoExplicacao = `Previsão ajustada: base × ${crescimento}% crescimento`;
+        } else {
+          // Previsão original do banco com crescimento padrão
+          const vendaBase = previsaoBase / 1.10;
+          previsaoExplicacao = `Calculado: ${formatNumber(Math.round(vendaBase))} vendas em ${defaultAno - 1} × ${crescimento}% crescimento`;
+        }
       }
 
       // 5. Variação entre previsão e realizado (simplificado)
@@ -571,7 +577,7 @@ export function TabelaPrevisaoProdutos({
                     )}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      {row.previsaoOrigem !== 'banco' && (
+                      {row.previsaoExplicacao && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
