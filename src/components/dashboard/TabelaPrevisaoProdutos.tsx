@@ -119,40 +119,59 @@ export function TabelaPrevisaoProdutos({
       const estoqueItem = estoqueAtual.find((e) => e.codigo_produto === codigoProduto);
       const estoqueValor = estoqueItem?.quantidade_disponivel || 0;
 
-      // 9. Crescimento - buscar valor específico por mês/ano ou usar padrão
-      // Prioridade: mês+ano específico > ano específico > global > 10%
+      // 9. Crescimento - buscar valor específico por cliente/mês/ano ou usar padrão
+      // Prioridade: cliente+mês+ano > mês+ano > ano > global > 10%
       let crescimento = 10; // padrão
+      const clienteFiltro = filters.clientes.length === 1 ? filters.clientes[0] : null;
       
       if (crescimentos) {
-        // Buscar por mês e ano específicos
-        const crescMesAno = crescimentos.find(c => 
-          c.codigo_produto === codigoProduto && 
-          c.ano === defaultAno && 
-          c.mes === defaultMes
-        );
-        
-        if (crescMesAno) {
-          crescimento = crescMesAno.percentual_crescimento || 10;
-        } else {
-          // Buscar por ano específico (sem mês)
-          const crescAno = crescimentos.find(c => 
+        // 1. Buscar por cliente específico + mês + ano (se houver filtro de cliente único)
+        if (clienteFiltro) {
+          const crescClienteMesAno = crescimentos.find(c => 
             c.codigo_produto === codigoProduto && 
+            c.cliente === clienteFiltro &&
             c.ano === defaultAno && 
-            (c.mes === null || c.mes === 0)
+            c.mes === defaultMes
+          );
+          if (crescClienteMesAno) {
+            crescimento = crescClienteMesAno.percentual_crescimento || 10;
+          }
+        }
+        
+        // 2. Se não encontrou por cliente, buscar por mês e ano (geral)
+        if (crescimento === 10) {
+          const crescMesAno = crescimentos.find(c => 
+            c.codigo_produto === codigoProduto && 
+            c.cliente === null &&
+            c.ano === defaultAno && 
+            c.mes === defaultMes
           );
           
-          if (crescAno) {
-            crescimento = crescAno.percentual_crescimento || 10;
+          if (crescMesAno) {
+            crescimento = crescMesAno.percentual_crescimento || 10;
           } else {
-            // Buscar crescimento global (sem ano nem mês)
-            const crescGlobal = crescimentos.find(c => 
+            // 3. Buscar por ano específico (sem mês)
+            const crescAno = crescimentos.find(c => 
               c.codigo_produto === codigoProduto && 
-              (c.ano === null || c.ano === 0) && 
+              c.cliente === null &&
+              c.ano === defaultAno && 
               (c.mes === null || c.mes === 0)
             );
             
-            if (crescGlobal) {
-              crescimento = crescGlobal.percentual_crescimento || 10;
+            if (crescAno) {
+              crescimento = crescAno.percentual_crescimento || 10;
+            } else {
+              // 4. Buscar crescimento global (sem ano nem mês)
+              const crescGlobal = crescimentos.find(c => 
+                c.codigo_produto === codigoProduto && 
+                c.cliente === null &&
+                (c.ano === null || c.ano === 0) && 
+                (c.mes === null || c.mes === 0)
+              );
+              
+              if (crescGlobal) {
+                crescimento = crescGlobal.percentual_crescimento || 10;
+              }
             }
           }
         }
@@ -294,6 +313,8 @@ export function TabelaPrevisaoProdutos({
     try {
       const ano = anoSelecionado ? parseInt(anoSelecionado) : null;
       const mes = mesSelecionado;
+      // Se houver filtro de 1 cliente, salva crescimento específico para esse cliente
+      const clienteFiltro = filters.clientes.length === 1 ? filters.clientes[0] : null;
 
       // Se novoValor for 0 ou vazio, deletar o registro específico
       if (novoValor === 0 || editandoValor.trim() === "" || isNaN(novoValor)) {
@@ -315,6 +336,12 @@ export function TabelaPrevisaoProdutos({
           deleteQuery = deleteQuery.eq("mes", mes);
         }
 
+        if (clienteFiltro === null) {
+          deleteQuery = deleteQuery.is("cliente", null);
+        } else {
+          deleteQuery = deleteQuery.eq("cliente", clienteFiltro);
+        }
+
         const { error } = await deleteQuery;
 
         if (error) throw error;
@@ -323,7 +350,7 @@ export function TabelaPrevisaoProdutos({
           description: "O crescimento customizado foi removido. Será usado o padrão (10%).",
         });
       } else {
-        // Upsert com ano e mês para permitir configuração por período
+        // Upsert com ano, mês e cliente para permitir configuração granular
         const { error } = await supabase
           .from("crescimento_produtos")
           .upsert(
@@ -332,13 +359,15 @@ export function TabelaPrevisaoProdutos({
               percentual_crescimento: novoValor,
               ano: ano,
               mes: mes,
+              cliente: clienteFiltro,
             }
           );
 
         if (error) throw error;
 
+        const clienteMsg = clienteFiltro ? ` para ${clienteFiltro}` : "";
         toast.success("Crescimento atualizado", {
-          description: `Percentual salvo para ${mes ? `mês ${mes}` : "todos os meses"} de ${ano || "todos os anos"}.`,
+          description: `Percentual salvo${clienteMsg} para ${mes ? `mês ${mes}` : "todos os meses"} de ${ano || "todos os anos"}.`,
         });
       }
 

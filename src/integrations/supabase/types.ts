@@ -17,18 +17,21 @@ export type Database = {
       crescimento_produtos: {
         Row: {
           ano: number | null
+          cliente: string | null
           codigo_produto: string
           mes: number | null
           percentual_crescimento: number | null
         }
         Insert: {
           ano?: number | null
+          cliente?: string | null
           codigo_produto: string
           mes?: number | null
           percentual_crescimento?: number | null
         }
         Update: {
           ano?: number | null
+          cliente?: string | null
           codigo_produto?: string
           mes?: number | null
           percentual_crescimento?: number | null

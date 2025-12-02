@@ -26,6 +26,7 @@ export interface CrescimentoProduto {
   percentual_crescimento: number | null;
   ano: number | null;
   mes: number | null;
+  cliente: string | null;
 }
 
 // Interface principal para o dashboard
