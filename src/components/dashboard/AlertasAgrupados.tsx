@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, XCircle, Clock, TrendingDown, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertTriangle, CheckCircle2, Clock, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
 import { DashboardData } from "@/hooks/useSupabaseDashboardData";
 import { calcularAlertas } from "@/lib/alertas-utils";
 import { cleanProductName } from "@/lib/product-utils";
@@ -30,6 +32,7 @@ interface AlertaGrupo {
 export function AlertasAgrupados({ data, mesSelecionado, anoSelecionado }: AlertasAgrupadosProps) {
   const [alertasMap, setAlertasMap] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Calcular alertas quando os dados mudarem
   useEffect(() => {
@@ -45,6 +48,18 @@ export function AlertasAgrupados({ data, mesSelecionado, anoSelecionado }: Alert
     };
     calcular();
   }, [data, mesSelecionado, anoSelecionado]);
+
+  const toggleGroup = (tipo: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tipo)) {
+        newSet.delete(tipo);
+      } else {
+        newSet.add(tipo);
+      }
+      return newSet;
+    });
+  };
 
   // Agrupar alertas por tipo
   const alertasAgrupados: AlertaGrupo[] = [];
@@ -179,46 +194,72 @@ export function AlertasAgrupados({ data, mesSelecionado, anoSelecionado }: Alert
         {alertasAgrupados.map((grupo) => {
           const styles = getSeveridadeStyles(grupo.severidade);
           const Icon = grupo.icon;
+          const isExpanded = expandedGroups.has(grupo.tipo);
 
           return (
-            <Alert key={grupo.tipo} className={styles.alert}>
-              <Icon className={cn("h-4 w-4", styles.iconColor)} />
-              <AlertTitle className="flex items-center gap-2 mb-3">
-                {grupo.tipo}
-                <Badge className={styles.badge} variant="secondary">
-                  {grupo.items.length}
-                </Badge>
-              </AlertTitle>
-              <AlertDescription>
-                <div className="space-y-3">
-                  {grupo.items.map((item) => (
-                    <div
-                      key={item.codigo}
-                      className="p-3 rounded-lg bg-background/50 border border-border/50"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {item.produto}
-                          </p>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            Código: {item.codigo}
-                          </p>
+            <Collapsible
+              key={grupo.tipo}
+              open={isExpanded}
+              onOpenChange={() => toggleGroup(grupo.tipo)}
+            >
+              <Alert className={styles.alert}>
+                <Icon className={cn("h-4 w-4", styles.iconColor)} />
+                <AlertTitle className="flex items-center justify-between mb-0">
+                  <div className="flex items-center gap-2">
+                    {grupo.tipo}
+                    <Badge className={styles.badge} variant="secondary">
+                      {grupo.items.length}
+                    </Badge>
+                  </div>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-4 w-4" />
+                          Ocultar
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4" />
+                          Ver detalhes
+                        </>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </AlertTitle>
+                <CollapsibleContent>
+                  <AlertDescription className="mt-3">
+                    <div className="space-y-3">
+                      {grupo.items.map((item) => (
+                        <div
+                          key={item.codigo}
+                          className="p-3 rounded-lg bg-background/50 border border-border/50"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">
+                                {item.produto}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-mono">
+                                Código: {item.codigo}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-border/30">
+                            {item.alertas.map((alerta, idx) => (
+                              <p key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-warning flex-shrink-0" />
+                                {alerta}
+                              </p>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-border/30">
-                        {item.alertas.map((alerta, idx) => (
-                          <p key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-warning flex-shrink-0" />
-                            {alerta}
-                          </p>
-                        ))}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </AlertDescription>
-            </Alert>
+                  </AlertDescription>
+                </CollapsibleContent>
+              </Alert>
+            </Collapsible>
           );
         })}
       </CardContent>
