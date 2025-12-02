@@ -206,7 +206,11 @@ const Index = () => {
               </CardContent>
             </Card>
           ) : (
-            <AlertasAgrupados data={filteredDashboard} />
+            <AlertasAgrupados 
+              data={filteredDashboard} 
+              mesSelecionado={filters.mes} 
+              anoSelecionado={filters.ano} 
+            />
           )}
         </section>
 
