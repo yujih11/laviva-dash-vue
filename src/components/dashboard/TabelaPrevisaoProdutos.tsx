@@ -131,21 +131,44 @@ export function TabelaPrevisaoProdutos({
       const realizadoValor = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno);
       const vendasAnoAnterior = extrairVendasReais(item.vendas_reais, defaultMes, defaultAno - 1);
       
-      // Buscar vendas dos últimos 3 meses do ano atual para calcular média
-      const vendasRecentes: number[] = [];
-      for (let i = 1; i <= 3; i++) {
-        let mesAnterior = defaultMes - i;
-        let anoAnterior = defaultAno;
-        if (mesAnterior <= 0) {
-          mesAnterior += 12;
-          anoAnterior -= 1;
+      // Buscar vendas recentes disponíveis (últimos 6 meses a partir da data atual)
+      // Isso permite usar dados de Out/Nov 2025 mesmo ao visualizar Fev 2025
+      const vendasRecentes: { mes: number; ano: number; valor: number }[] = [];
+      const dataAtual = new Date();
+      const mesAtual = dataAtual.getMonth() + 1;
+      const anoAtual = dataAtual.getFullYear();
+      
+      // Buscar nos últimos 6 meses a partir do mês atual (data real)
+      for (let i = 1; i <= 6; i++) {
+        let mesBusca = mesAtual - i;
+        let anoBusca = anoAtual;
+        if (mesBusca <= 0) {
+          mesBusca += 12;
+          anoBusca -= 1;
         }
-        const vendaMes = extrairVendasReais(item.vendas_reais, mesAnterior, anoAnterior);
-        if (vendaMes > 0) vendasRecentes.push(vendaMes);
+        const vendaMes = extrairVendasReais(item.vendas_reais, mesBusca, anoBusca);
+        if (vendaMes > 0) {
+          vendasRecentes.push({ mes: mesBusca, ano: anoBusca, valor: vendaMes });
+        }
       }
-      const mediaVendasRecentes = vendasRecentes.length > 0 
-        ? vendasRecentes.reduce((a, b) => a + b, 0) / vendasRecentes.length 
+      
+      // Também buscar no ano selecionado (caso seja diferente do atual)
+      if (defaultAno !== anoAtual) {
+        for (let mes = 1; mes <= 12; mes++) {
+          const vendaMes = extrairVendasReais(item.vendas_reais, mes, defaultAno);
+          if (vendaMes > 0 && !vendasRecentes.some(v => v.mes === mes && v.ano === defaultAno)) {
+            vendasRecentes.push({ mes, ano: defaultAno, valor: vendaMes });
+          }
+        }
+      }
+      
+      // Ordenar por data mais recente e pegar os 3 mais recentes para média
+      vendasRecentes.sort((a, b) => (b.ano * 12 + b.mes) - (a.ano * 12 + a.mes));
+      const topVendasRecentes = vendasRecentes.slice(0, 3);
+      const mediaVendasRecentes = topVendasRecentes.length > 0 
+        ? topVendasRecentes.reduce((a, b) => a + b.valor, 0) / topVendasRecentes.length 
         : 0;
+      const mesesUsados = topVendasRecentes.map(v => `${v.mes}/${v.ano}`).join(', ');
 
       // 4. Estoque Atual - usar agregado por código normalizado
       const estoqueValor = estoqueAgregado.get(codigoNormalizado) || estoqueAgregado.get(codigoProduto) || 0;
@@ -222,10 +245,10 @@ export function TabelaPrevisaoProdutos({
           previsaoOrigem = 'ano_anterior';
           previsaoExplicacao = `Calculado: ${formatNumber(vendasAnoAnterior)} vendas em ${defaultAno - 1} × ${crescimento}% crescimento`;
         } else if (mediaVendasRecentes > 0) {
-          // Usar média dos últimos 3 meses
+          // Usar média das vendas recentes disponíveis
           previsaoValor = Math.round(mediaVendasRecentes * (1 + crescimento / 100));
           previsaoOrigem = 'media_recente';
-          previsaoExplicacao = `Calculado: média de ${formatNumber(Math.round(mediaVendasRecentes))} (últimos ${vendasRecentes.length} meses) × ${crescimento}% crescimento`;
+          previsaoExplicacao = `Calculado: média de ${formatNumber(Math.round(mediaVendasRecentes))} (meses: ${mesesUsados}) × ${crescimento}% crescimento`;
         } else {
           // Sem dados para calcular
           previsaoOrigem = 'sem_dados';
