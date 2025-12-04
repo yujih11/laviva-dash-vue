@@ -34,13 +34,29 @@ export function useFilteredDashboardData(
         }
       }
 
-      // Filtro de ano - verifica se há previsões para o ano selecionado
-      if (filters.ano && item.previsoes) {
-        const hasPrevisoesAno = item.previsoes.some((p) => {
+      // Filtro de ano - verifica se há previsões OU vendas no ano anterior (para calcular previsão)
+      if (filters.ano) {
+        const anoSelecionado = parseInt(filters.ano);
+        const anoAnterior = anoSelecionado - 1;
+        
+        // Verificar se tem previsões para o ano selecionado
+        const hasPrevisoesAno = item.previsoes?.some((p) => {
           const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
-          return anoNum === parseInt(filters.ano);
-        });
-        if (!hasPrevisoesAno) return false;
+          return anoNum === anoSelecionado;
+        }) || false;
+        
+        // Verificar se tem vendas no ano anterior (para calcular previsão via fallback)
+        const hasVendasAnoAnterior = item.vendas_reais?.some((v) => {
+          return v.ano === anoAnterior;
+        }) || false;
+        
+        // Verificar se tem vendas no ano selecionado
+        const hasVendasAnoSelecionado = item.vendas_reais?.some((v) => {
+          return v.ano === anoSelecionado;
+        }) || false;
+        
+        // Incluir se tem previsões, vendas no ano selecionado, ou vendas no ano anterior
+        if (!hasPrevisoesAno && !hasVendasAnoAnterior && !hasVendasAnoSelecionado) return false;
         
         // Filtro de mês dentro do ano
         if (filters.mes) {
@@ -49,13 +65,26 @@ export function useFilteredDashboardData(
             'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
           };
           
-          const hasPrevisoesAnoMes = item.previsoes.some((p) => {
+          // Verificar previsão para o mês/ano
+          const hasPrevisoesAnoMes = item.previsoes?.some((p) => {
             const anoNum = typeof p.ano === 'string' ? parseInt(p.ano) : p.ano;
             const mesStr = String(p.mes).toLowerCase();
             const mesNum = mesMap[mesStr] || parseInt(String(p.mes));
-            return anoNum === parseInt(filters.ano) && mesNum === filters.mes;
-          });
-          if (!hasPrevisoesAnoMes) return false;
+            return anoNum === anoSelecionado && mesNum === filters.mes;
+          }) || false;
+          
+          // Verificar vendas no mês/ano anterior (para calcular previsão via fallback)
+          const hasVendasMesAnoAnterior = item.vendas_reais?.some((v) => {
+            return v.ano === anoAnterior && v.mes === filters.mes;
+          }) || false;
+          
+          // Verificar vendas no mês/ano selecionado
+          const hasVendasMesAnoSelecionado = item.vendas_reais?.some((v) => {
+            return v.ano === anoSelecionado && v.mes === filters.mes;
+          }) || false;
+          
+          // Incluir se tem previsões para o mês, vendas no mês do ano selecionado, ou vendas no mês do ano anterior
+          if (!hasPrevisoesAnoMes && !hasVendasMesAnoAnterior && !hasVendasMesAnoSelecionado) return false;
         }
       }
 
