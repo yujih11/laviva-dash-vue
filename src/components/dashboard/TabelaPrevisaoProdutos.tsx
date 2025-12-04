@@ -564,8 +564,17 @@ export function TabelaPrevisaoProdutos({
                     row.isOperational && "bg-primary/5 border-l-2 border-l-primary"
                   )}
                 >
-                  <TableCell className="font-medium max-w-[250px] truncate">
-                    {row.produto}
+                  <TableCell className="font-medium max-w-[250px]">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate block cursor-default">{row.produto}</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-popover max-w-[400px]">
+                          <p>{row.produto}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="font-mono text-sm">{row.codigo}</TableCell>
                   <TableCell>{row.cliente}</TableCell>
