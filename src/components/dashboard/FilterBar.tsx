@@ -127,10 +127,10 @@ export function FilterBar({ data }: FilterBarProps) {
               )}
               {hasActiveFilters && (
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-8 gap-1 text-xs"
+                  className="h-8 gap-1 text-xs bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80"
                 >
                   <X className="h-3 w-3" />
                   Limpar filtros

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import lavivaLogo from "@/assets/laviva-logo.png";
+import { toast } from "sonner";
 
 interface DashboardHeaderProps {
   onRefresh: () => void;
@@ -35,7 +36,10 @@ export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
           {/* Botões de ação */}
           <div className="flex items-center gap-2">
             <Button
-              onClick={onRefresh}
+              onClick={() => {
+                onRefresh();
+                toast.success("Atualizando dados...");
+              }}
               size="sm"
               className="gap-2 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={loading}
@@ -46,9 +50,8 @@ export function DashboardHeader({ onRefresh, loading }: DashboardHeaderProps) {
             {user && (
               <Button
                 onClick={signOut}
-                variant="outline"
                 size="sm"
-                className="gap-2 shrink-0 border-border bg-background/50 hover:bg-accent hover:text-accent-foreground"
+                className="gap-2 shrink-0 bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sair</span>
