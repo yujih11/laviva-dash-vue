@@ -43,7 +43,8 @@ export function formatPrevisaoDataForExport(
     produto: string;
     codigo: string;
     cliente: string;
-    previsao: number;
+    previsaoVendas: number;
+    previsaoProducao: number;
     realizado: number | null;
     estoque: number;
     variacao: number;
@@ -56,9 +57,10 @@ export function formatPrevisaoDataForExport(
     "Produto": row.produto,
     "Código": row.codigo,
     "Cliente": row.cliente,
-    "Previsão": row.previsao,
-    "Realizado": row.realizado ?? "—",
+    "Prev. Vendas": row.previsaoVendas,
     "Estoque Atual": row.estoque,
+    "Prev. Produção": row.previsaoProducao,
+    "Realizado": row.realizado ?? "—",
     "Variação Trimestral (%)": row.variacao !== 0 ? row.variacao : "—",
     "Alertas": row.alertas.length > 0 ? row.alertas.join("; ") : "Nenhum",
   }));
