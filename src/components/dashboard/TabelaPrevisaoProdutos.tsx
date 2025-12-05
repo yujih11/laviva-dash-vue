@@ -55,7 +55,7 @@ interface TabelaPrevisaoProdutosProps {
   anoSelecionado: "2025" | "2026" | null;
 }
 
-type SortField = "produto" | "codigo" | "cliente" | "previsao" | "estoque";
+type SortField = "produto" | "codigo" | "cliente" | "previsaoVendas" | "previsaoProducao" | "estoque";
 type SortDirection = "asc" | "desc";
 
 export function TabelaPrevisaoProdutos({
@@ -292,12 +292,16 @@ export function TabelaPrevisaoProdutos({
       // 8. Buscar alertas do mapa
       const alertasProduto = alertasMap.get(codigoProduto) || [];
 
+      // Previsão de Produção = Previsão de Vendas - Estoque
+      const previsaoProducao = previsaoValor - estoqueValor;
+
       return {
         id: codigoProduto,
         produto: produtoLimpo,
         codigo: codigoProduto,
         cliente,
-        previsao: previsaoValor,
+        previsaoVendas: previsaoValor,
+        previsaoProducao,
         previsaoOrigem,
         previsaoExplicacao,
         realizado: isPast ? realizadoValor : null,
@@ -327,8 +331,11 @@ export function TabelaPrevisaoProdutos({
         case "cliente":
           comparison = a.cliente.localeCompare(b.cliente);
           break;
-        case "previsao":
-          comparison = a.previsao - b.previsao;
+        case "previsaoVendas":
+          comparison = a.previsaoVendas - b.previsaoVendas;
+          break;
+        case "previsaoProducao":
+          comparison = a.previsaoProducao - b.previsaoProducao;
           break;
         case "estoque":
           comparison = a.estoque - b.estoque;
@@ -520,14 +527,13 @@ export function TabelaPrevisaoProdutos({
               </TableHead>
               <TableHead className="text-right">
                 <button
-                  onClick={() => handleSort("previsao")}
+                  onClick={() => handleSort("previsaoVendas")}
                   className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
                 >
-                  Previsão
+                  Prev. Vendas
                   <ArrowUpDown className="h-3 w-3" />
                 </button>
               </TableHead>
-              <TableHead className="text-right">Realizado</TableHead>
               <TableHead className="text-right">
                 <button
                   onClick={() => handleSort("estoque")}
@@ -537,6 +543,26 @@ export function TabelaPrevisaoProdutos({
                   <ArrowUpDown className="h-3 w-3" />
                 </button>
               </TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleSort("previsaoProducao")}
+                        className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                      >
+                        Prev. Produção
+                        <Info className="h-3 w-3" />
+                        <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-popover">
+                      <p>Prev. Vendas - Estoque = Quanto precisa produzir</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="text-right">Realizado</TableHead>
               <TableHead className="text-right">
                 <TooltipProvider>
                   <Tooltip>
@@ -624,14 +650,40 @@ export function TabelaPrevisaoProdutos({
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      <span>{row.previsao > 0 ? formatNumber(row.previsao) : "—"}</span>
+                      <span>{row.previsaoVendas > 0 ? formatNumber(row.previsaoVendas) : "—"}</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {row.isPast ? formatNumber(row.realizado) : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     {row.estoque > 0 ? formatNumber(row.estoque) : "—"}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right font-semibold",
+                      row.previsaoProducao <= 0 && "text-success",
+                      row.previsaoProducao > 0 && "text-warning"
+                    )}
+                  >
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            {row.previsaoVendas > 0 || row.estoque > 0 
+                              ? formatNumber(row.previsaoProducao) 
+                              : "—"}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-popover">
+                          <p className="text-sm">
+                            {row.previsaoProducao <= 0 
+                              ? "Estoque suficiente" 
+                              : `Necessário produzir ${formatNumber(row.previsaoProducao)} unidades`}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {row.isPast ? formatNumber(row.realizado) : "—"}
                   </TableCell>
                    <TableCell className="text-right">
                     {editandoCodigo === row.codigo ? (
@@ -683,7 +735,7 @@ export function TabelaPrevisaoProdutos({
                   </TableCell>
                   <TableCell className="text-right">
                     <MiniGraficoComparacao
-                      previsao={row.previsao}
+                      previsao={row.previsaoVendas}
                       realizado={row.realizado}
                     />
                   </TableCell>
