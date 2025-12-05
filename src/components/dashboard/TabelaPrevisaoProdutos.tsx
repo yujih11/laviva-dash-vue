@@ -663,24 +663,24 @@ export function TabelaPrevisaoProdutos({
                       row.previsaoProducao > 0 && "text-warning"
                     )}
                   >
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help">
-                            {row.previsaoVendas > 0 || row.estoque > 0 
-                              ? formatNumber(row.previsaoProducao) 
-                              : "—"}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-popover">
-                          <p className="text-sm">
-                            {row.previsaoProducao <= 0 
-                              ? "Estoque suficiente" 
-                              : `Necessário produzir ${formatNumber(row.previsaoProducao)} unidades`}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {row.previsaoVendas > 0 || row.estoque > 0 ? (
+                      row.previsaoProducao <= 0 ? (
+                        <span className="text-xs">Estoque suficiente</span>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">{formatNumber(row.previsaoProducao)}</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-popover">
+                              <p className="text-sm">Necessário produzir {formatNumber(row.previsaoProducao)} unidades</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {row.isPast ? formatNumber(row.realizado) : "—"}
