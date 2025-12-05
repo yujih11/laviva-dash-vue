@@ -70,6 +70,8 @@ export function TabelaPrevisaoProdutos({
   const [alertasMap, setAlertasMap] = useState<Map<string, string[]>>(new Map());
   const [editandoCodigo, setEditandoCodigo] = useState<string | null>(null);
   const [editandoValor, setEditandoValor] = useState<string>("");
+  const [editandoProducaoCodigo, setEditandoProducaoCodigo] = useState<string | null>(null);
+  const [editandoProducaoValor, setEditandoProducaoValor] = useState<string>("");
   const { filters } = useDashboardFilters();
   
   // Buscar todos os crescimentos para usar na lógica
@@ -78,6 +80,19 @@ export function TabelaPrevisaoProdutos({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crescimento_produtos")
+        .select("*");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Buscar previsões de produção manuais
+  const { data: previsoesManuais, refetch: refetchPrevisoesManuais } = useQuery({
+    queryKey: ["previsao_producao_manual"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("previsao_producao_manual")
         .select("*");
 
       if (error) throw error;
@@ -292,8 +307,39 @@ export function TabelaPrevisaoProdutos({
       // 8. Buscar alertas do mapa
       const alertasProduto = alertasMap.get(codigoProduto) || [];
 
-      // Previsão de Produção = Previsão de Vendas - Estoque
-      const previsaoProducao = previsaoValor - estoqueValor;
+      // 9. Previsão de Produção - verificar se tem valor manual
+      const clienteFiltroProducao = filters.clientes.length === 1 ? filters.clientes[0] : null;
+      let previsaoProducaoManual: number | null = null;
+      
+      if (previsoesManuais) {
+        // Buscar previsão manual específica para cliente+mês+ano
+        const manualClienteMesAno = previsoesManuais.find(p => 
+          p.codigo_produto === codigoProduto && 
+          p.cliente === clienteFiltroProducao &&
+          p.ano === defaultAno && 
+          p.mes === defaultMes
+        );
+        
+        if (manualClienteMesAno) {
+          previsaoProducaoManual = manualClienteMesAno.quantidade;
+        } else {
+          // Buscar previsão manual geral (sem cliente)
+          const manualMesAno = previsoesManuais.find(p => 
+            p.codigo_produto === codigoProduto && 
+            p.cliente === null &&
+            p.ano === defaultAno && 
+            p.mes === defaultMes
+          );
+          if (manualMesAno) {
+            previsaoProducaoManual = manualMesAno.quantidade;
+          }
+        }
+      }
+
+      // Usar valor manual se existir, senão calcular
+      const previsaoProducaoCalculada = previsaoValor - estoqueValor;
+      const previsaoProducao = previsaoProducaoManual !== null ? previsaoProducaoManual : previsaoProducaoCalculada;
+      const isPrevisaoProducaoManual = previsaoProducaoManual !== null;
 
       return {
         id: codigoProduto,
@@ -302,6 +348,8 @@ export function TabelaPrevisaoProdutos({
         cliente,
         previsaoVendas: previsaoValor,
         previsaoProducao,
+        previsaoProducaoCalculada,
+        isPrevisaoProducaoManual,
         previsaoOrigem,
         previsaoExplicacao,
         realizado: isPast ? realizadoValor : null,
@@ -314,7 +362,7 @@ export function TabelaPrevisaoProdutos({
         isOperational,
       };
     });
-  }, [data, estoqueAgregado, mesSelecionado, anoSelecionado, alertasMap, filters.clientes, crescimentos]);
+  }, [data, estoqueAgregado, mesSelecionado, anoSelecionado, alertasMap, filters.clientes, crescimentos, previsoesManuais]);
 
   // Ordenação
   const sortedData = useMemo(() => {
@@ -475,6 +523,85 @@ export function TabelaPrevisaoProdutos({
   const handleCancelarEdicao = () => {
     setEditandoCodigo(null);
     setEditandoValor("");
+  };
+
+  const handleIniciarEdicaoProducao = (codigo: string, producaoAtual: number) => {
+    setEditandoProducaoCodigo(codigo);
+    setEditandoProducaoValor(producaoAtual > 0 ? String(producaoAtual) : "");
+  };
+
+  const handleSalvarProducao = async (codigo: string) => {
+    const novoValor = parseInt(editandoProducaoValor);
+    
+    try {
+      const ano = anoSelecionado ? parseInt(anoSelecionado) : null;
+      const mes = mesSelecionado;
+      const clienteFiltro = filters.clientes.length === 1 ? filters.clientes[0] : null;
+
+      // Se vazio ou 0, deletar o registro
+      if (editandoProducaoValor.trim() === "" || novoValor === 0 || isNaN(novoValor)) {
+        let deleteQuery = supabase
+          .from("previsao_producao_manual")
+          .delete()
+          .eq("codigo_produto", codigo);
+        
+        if (ano === null) {
+          deleteQuery = deleteQuery.is("ano", null);
+        } else {
+          deleteQuery = deleteQuery.eq("ano", ano);
+        }
+        
+        if (mes === null) {
+          deleteQuery = deleteQuery.is("mes", null);
+        } else {
+          deleteQuery = deleteQuery.eq("mes", mes);
+        }
+
+        if (clienteFiltro === null) {
+          deleteQuery = deleteQuery.is("cliente", null);
+        } else {
+          deleteQuery = deleteQuery.eq("cliente", clienteFiltro);
+        }
+
+        const { error } = await deleteQuery;
+        if (error) throw error;
+
+        toast.success("Previsão removida", {
+          description: "A previsão manual foi removida. Será usado o valor calculado.",
+        });
+      } else {
+        const { error } = await supabase
+          .from("previsao_producao_manual")
+          .upsert({
+            codigo_produto: codigo,
+            quantidade: novoValor,
+            ano: ano,
+            mes: mes,
+            cliente: clienteFiltro,
+          });
+
+        if (error) throw error;
+
+        const clienteMsg = clienteFiltro ? ` para ${clienteFiltro}` : "";
+        toast.success("Previsão salva", {
+          description: `Previsão de produção${clienteMsg} salva: ${formatNumber(novoValor)} unidades.`,
+        });
+      }
+
+      setEditandoProducaoCodigo(null);
+      setEditandoProducaoValor("");
+      refetchPrevisoesManuais();
+    } catch (error) {
+      console.error("Erro ao salvar previsão de produção:", error);
+      toast.error("Erro ao salvar", {
+        description: "Não foi possível salvar a previsão de produção.",
+      });
+    }
+  };
+
+  const handleCancelarEdicaoProducao = () => {
+    setEditandoProducaoCodigo(null);
+    setEditandoProducaoValor("");
   };
 
   return (
@@ -659,27 +786,80 @@ export function TabelaPrevisaoProdutos({
                   <TableCell
                     className={cn(
                       "text-right font-semibold",
-                      row.previsaoProducao <= 0 && "text-success",
-                      row.previsaoProducao > 0 && "text-warning"
+                      !row.isPrevisaoProducaoManual && row.previsaoProducao <= 0 && "text-success",
+                      row.previsaoProducao > 0 && "text-warning",
+                      row.isPrevisaoProducaoManual && "text-primary"
                     )}
                   >
-                    {row.previsaoVendas > 0 || row.estoque > 0 ? (
-                      row.previsaoProducao <= 0 ? (
-                        <span className="text-xs">Estoque suficiente</span>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help">{formatNumber(row.previsaoProducao)}</span>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-popover">
-                              <p className="text-sm">Necessário produzir {formatNumber(row.previsaoProducao)} unidades</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )
+                    {editandoProducaoCodigo === row.codigo ? (
+                      <div className="flex items-center gap-1 justify-end">
+                        <input
+                          type="number"
+                          value={editandoProducaoValor}
+                          onChange={(e) => setEditandoProducaoValor(e.target.value)}
+                          placeholder="0 = remover"
+                          className="w-24 px-2 py-1 text-sm border border-border rounded text-right bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSalvarProducao(row.codigo);
+                            if (e.key === "Escape") handleCancelarEdicaoProducao();
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-success hover:text-success"
+                          onClick={() => handleSalvarProducao(row.codigo)}
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          onClick={handleCancelarEdicaoProducao}
+                        >
+                          ✕
+                        </Button>
+                      </div>
                     ) : (
-                      "—"
+                      <div className="flex items-center gap-1 justify-end">
+                        {row.isPrevisaoProducaoManual && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 cursor-help text-primary" />
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover">
+                                <p className="text-sm">
+                                  Valor manual. Calculado seria: {row.previsaoProducaoCalculada <= 0 
+                                    ? "Estoque suficiente" 
+                                    : formatNumber(row.previsaoProducaoCalculada)}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {row.previsaoVendas > 0 || row.estoque > 0 || row.isPrevisaoProducaoManual ? (
+                          <button
+                            onClick={() => handleIniciarEdicaoProducao(row.codigo, row.previsaoProducao)}
+                            className="hover:underline cursor-pointer transition-colors"
+                          >
+                            {row.previsaoProducao <= 0 && !row.isPrevisaoProducaoManual ? (
+                              <span className="text-xs">Estoque suficiente</span>
+                            ) : (
+                              formatNumber(row.previsaoProducao)
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleIniciarEdicaoProducao(row.codigo, 0)}
+                            className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            —
+                          </button>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
