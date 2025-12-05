@@ -84,6 +84,7 @@ export function useSupabaseDashboardData() {
     data: vendasReais,
     isLoading: vendasLoading,
     error: vendasError,
+    refetch: refetchVendas,
   } = useQuery({
     queryKey: ["vendas_reais_resumidas_por_codigo"],
     queryFn: async () => {
@@ -104,6 +105,7 @@ export function useSupabaseDashboardData() {
     data: previsoes,
     isLoading: previsoesLoading,
     error: previsoesError,
+    refetch: refetchPrevisoes,
   } = useQuery({
     queryKey: ["previsao_resumida_por_codigo"],
     queryFn: async () => {
@@ -124,6 +126,7 @@ export function useSupabaseDashboardData() {
     data: crescimentos,
     isLoading: crescimentosLoading,
     error: crescimentosError,
+    refetch: refetchCrescimentos,
   } = useQuery({
     queryKey: ["crescimento_produtos"],
     queryFn: async () => {
@@ -269,6 +272,9 @@ export function useSupabaseDashboardData() {
     loading,
     error,
     refetch: () => {
+      refetchVendas();
+      refetchPrevisoes();
+      refetchCrescimentos();
       refetchEstoque();
     },
   };
