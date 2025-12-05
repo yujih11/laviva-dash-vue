@@ -209,6 +209,39 @@ export type Database = {
         }
         Relationships: []
       }
+      previsao_producao_manual: {
+        Row: {
+          ano: number | null
+          cliente: string | null
+          codigo_produto: string
+          created_at: string | null
+          id: string
+          mes: number | null
+          quantidade: number
+          updated_at: string | null
+        }
+        Insert: {
+          ano?: number | null
+          cliente?: string | null
+          codigo_produto: string
+          created_at?: string | null
+          id?: string
+          mes?: number | null
+          quantidade: number
+          updated_at?: string | null
+        }
+        Update: {
+          ano?: number | null
+          cliente?: string | null
+          codigo_produto?: string
+          created_at?: string | null
+          id?: string
+          mes?: number | null
+          quantidade?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
