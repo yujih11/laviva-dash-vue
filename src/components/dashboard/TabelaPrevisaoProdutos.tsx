@@ -785,7 +785,7 @@ export function TabelaPrevisaoProdutos({
                   </TableCell>
                   <TableCell
                     className={cn(
-                      "text-right font-semibold",
+                      "text-right font-semibold min-w-[100px]",
                       !row.isPrevisaoProducaoManual && row.previsaoProducao <= 0 && "text-success",
                       row.previsaoProducao > 0 && "text-warning",
                       row.isPrevisaoProducaoManual && "text-primary"
@@ -843,10 +843,10 @@ export function TabelaPrevisaoProdutos({
                         {row.previsaoVendas > 0 || row.estoque > 0 || row.isPrevisaoProducaoManual ? (
                           <button
                             onClick={() => handleIniciarEdicaoProducao(row.codigo, row.previsaoProducao)}
-                            className="hover:underline cursor-pointer transition-colors"
+                            className="hover:underline cursor-pointer transition-colors whitespace-nowrap"
                           >
                             {row.previsaoProducao <= 0 && !row.isPrevisaoProducaoManual ? (
-                              <span className="text-xs">Estoque suficiente</span>
+                              <span className="text-xs whitespace-nowrap">Estoque suficiente</span>
                             ) : (
                               formatNumber(row.previsaoProducao)
                             )}
