@@ -46,6 +46,7 @@ export default function ProdutoDetalhes() {
   const [crescimentoPercentual, setCrescimentoPercentual] = useState(10); // Default 10%
   const [anoSelecionado, setAnoSelecionado] = useState<number>(2025);
   const [mesSelecionado, setMesSelecionado] = useState<number | null>(null);
+  const [anoTabela, setAnoTabela] = useState<number>(2025);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -421,17 +422,36 @@ export default function ProdutoDetalhes() {
 
         {/* Tabela de Vendas por Cliente */}
         <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Vendas Detalhadas por Cliente</CardTitle>
-            <CardDescription>
-              Dados reais de vendas com detalhamento mensal por cliente em {anoSelecionado}
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>Vendas Detalhadas por Cliente</CardTitle>
+              <CardDescription>
+                Dados reais de vendas com detalhamento mensal por cliente em {anoTabela}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Ano:</span>
+              <Select value={String(anoTabela)} onValueChange={(v) => setAnoTabela(parseInt(v))}>
+                <SelectTrigger className="w-[100px] bg-background border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  <SelectItem value="2020">2020</SelectItem>
+                  <SelectItem value="2021">2021</SelectItem>
+                  <SelectItem value="2022">2022</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {
               // Preparar dados da tabela: colunas = clientes, linhas = meses
               const clientesUnicos = new Set<string>();
-              const vendasFiltradas = vendasReais.filter(v => v.ano === anoSelecionado);
+              const vendasFiltradas = vendasReais.filter(v => v.ano === anoTabela);
               
               vendasFiltradas.forEach(venda => {
                 if (venda.vendas_por_cliente && typeof venda.vendas_por_cliente === 'object') {
@@ -447,10 +467,7 @@ export default function ProdutoDetalhes() {
               const dadosTabela = mesNomes.map((mesNome, idx) => {
                 const mesNum = idx + 1;
                 
-                // Filtrar por mês se selecionado
-                if (mesSelecionado !== null && mesNum !== mesSelecionado) {
-                  return null;
-                }
+                // Não aplicar filtro de mês na tabela - sempre mostrar todos os meses
                 
                 const vendaDoMes = vendasFiltradas.find(v => v.mes === mesNum);
                 const clientesVendas: Record<string, number> = {};
@@ -472,7 +489,7 @@ export default function ProdutoDetalhes() {
               if (clientesArray.length === 0) {
                 return (
                   <div className="text-center py-8 text-muted-foreground">
-                    Nenhum dado de vendas disponível para {anoSelecionado}
+                    Nenhum dado de vendas disponível para {anoTabela}
                   </div>
                 );
               }
