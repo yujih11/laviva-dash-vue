@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, TrendingUp, Package, Calendar } from "lucide-react";
 import { cleanProductName } from "@/lib/product-utils";
 import { 
@@ -417,6 +418,115 @@ export default function ProdutoDetalhes() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Tabela de Vendas por Cliente */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Vendas Detalhadas por Cliente</CardTitle>
+            <CardDescription>
+              Dados reais de vendas com detalhamento mensal por cliente em {anoSelecionado}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              // Preparar dados da tabela: colunas = clientes, linhas = meses
+              const clientesUnicos = new Set<string>();
+              const vendasFiltradas = vendasReais.filter(v => v.ano === anoSelecionado);
+              
+              vendasFiltradas.forEach(venda => {
+                if (venda.vendas_por_cliente && typeof venda.vendas_por_cliente === 'object') {
+                  Object.keys(venda.vendas_por_cliente).forEach(cliente => {
+                    clientesUnicos.add(cliente);
+                  });
+                }
+              });
+
+              const clientesArray = Array.from(clientesUnicos).sort();
+              
+              // Estruturar dados por mês
+              const dadosTabela = mesNomes.map((mesNome, idx) => {
+                const mesNum = idx + 1;
+                
+                // Filtrar por mês se selecionado
+                if (mesSelecionado !== null && mesNum !== mesSelecionado) {
+                  return null;
+                }
+                
+                const vendaDoMes = vendasFiltradas.find(v => v.mes === mesNum);
+                const clientesVendas: Record<string, number> = {};
+                
+                if (vendaDoMes?.vendas_por_cliente && typeof vendaDoMes.vendas_por_cliente === 'object') {
+                  Object.entries(vendaDoMes.vendas_por_cliente).forEach(([cliente, quantidade]) => {
+                    clientesVendas[cliente] = Number(quantidade);
+                  });
+                }
+                
+                return {
+                  mes: mesNome,
+                  mesNum,
+                  total: vendaDoMes?.total_vendido || 0,
+                  clientes: clientesVendas,
+                };
+              }).filter(Boolean) as Array<{mes: string; mesNum: number; total: number; clientes: Record<string, number>}>;
+
+              if (clientesArray.length === 0) {
+                return (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum dado de vendas disponível para {anoSelecionado}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[80px] sticky left-0 bg-background z-10">Mês</TableHead>
+                        {clientesArray.map(cliente => (
+                          <TableHead key={cliente} className="min-w-[120px] text-center">
+                            {cliente}
+                          </TableHead>
+                        ))}
+                        <TableHead className="min-w-[100px] text-center font-bold">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dadosTabela.map(row => (
+                        <TableRow key={row.mesNum}>
+                          <TableCell className="font-medium sticky left-0 bg-background z-10">{row.mes}</TableCell>
+                          {clientesArray.map(cliente => (
+                            <TableCell key={cliente} className="text-center">
+                              {row.clientes[cliente] ? row.clientes[cliente].toLocaleString("pt-BR") : "—"}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center font-bold text-primary">
+                            {row.total > 0 ? row.total.toLocaleString("pt-BR") : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Linha de totais */}
+                      <TableRow className="bg-muted/50 font-bold">
+                        <TableCell className="sticky left-0 bg-muted/50 z-10">Total</TableCell>
+                        {clientesArray.map(cliente => {
+                          const totalCliente = dadosTabela.reduce((acc, row) => acc + (row.clientes[cliente] || 0), 0);
+                          return (
+                            <TableCell key={cliente} className="text-center">
+                              {totalCliente > 0 ? totalCliente.toLocaleString("pt-BR") : "—"}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-center font-bold text-primary">
+                          {dadosTabela.reduce((acc, row) => acc + row.total, 0).toLocaleString("pt-BR")}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
