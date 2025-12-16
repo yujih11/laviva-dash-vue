@@ -158,6 +158,18 @@ export function FilterBar({ data }: FilterBarProps) {
                       : [...prev.produtos, value],
                   }))
                 }
+                onSelectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    produtos: produtos.map((p) => p.codigo),
+                  }))
+                }
+                onDeselectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    produtos: [],
+                  }))
+                }
                 placeholder="Selecione produtos"
               />
             </div>
@@ -179,6 +191,18 @@ export function FilterBar({ data }: FilterBarProps) {
                       : [...prev.clientes, value],
                   }))
                 }
+                onSelectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    clientes: [...clientes],
+                  }))
+                }
+                onDeselectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    clientes: [],
+                  }))
+                }
                 placeholder="Selecione clientes"
               />
             </div>
@@ -198,6 +222,18 @@ export function FilterBar({ data }: FilterBarProps) {
                     marcas: prev.marcas.includes(value)
                       ? prev.marcas.filter((m) => m !== value)
                       : [...prev.marcas, value],
+                  }))
+                }
+                onSelectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    marcas: [...marcas],
+                  }))
+                }
+                onDeselectAll={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    marcas: [],
                   }))
                 }
                 placeholder="Selecione marcas"
@@ -268,6 +304,8 @@ interface MultiSelectFilterProdutosProps {
   options: Array<{ codigo: string; nome: string }>;
   selected: string[];
   onSelect: (value: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
   placeholder: string;
 }
 
@@ -275,6 +313,8 @@ function MultiSelectFilterProdutos({
   options,
   selected,
   onSelect,
+  onSelectAll,
+  onDeselectAll,
   placeholder,
 }: MultiSelectFilterProdutosProps) {
   return (
@@ -293,6 +333,30 @@ function MultiSelectFilterProdutos({
       </PopoverTrigger>
       <PopoverContent className="w-[350px] p-0 bg-popover" align="start">
         <Command className="bg-popover">
+          <div className="flex gap-1 p-2 border-b border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onSelectAll();
+              }}
+              className="flex-1 text-xs h-7"
+            >
+              Selecionar todos
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onDeselectAll();
+              }}
+              className="flex-1 text-xs h-7"
+            >
+              Limpar seleção
+            </Button>
+          </div>
           <CommandInput placeholder="Buscar produto..." className="text-foreground placeholder:text-muted-foreground/80" />
           <CommandList>
             <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
@@ -333,6 +397,8 @@ interface MultiSelectFilterProps {
   options: string[];
   selected: string[];
   onSelect: (value: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
   placeholder: string;
 }
 
@@ -340,6 +406,8 @@ function MultiSelectFilter({
   options,
   selected,
   onSelect,
+  onSelectAll,
+  onDeselectAll,
   placeholder,
 }: MultiSelectFilterProps) {
   return (
@@ -358,6 +426,30 @@ function MultiSelectFilter({
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0 bg-popover" align="start">
         <Command className="bg-popover">
+          <div className="flex gap-1 p-2 border-b border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onSelectAll();
+              }}
+              className="flex-1 text-xs h-7"
+            >
+              Selecionar todos
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onDeselectAll();
+              }}
+              className="flex-1 text-xs h-7"
+            >
+              Limpar seleção
+            </Button>
+          </div>
           <CommandInput placeholder="Buscar..." className="text-foreground placeholder:text-muted-foreground/80" />
           <CommandList>
             <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
